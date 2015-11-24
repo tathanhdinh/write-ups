@@ -1,0 +1,89 @@
+%!TEX root = reverseMe.tex
+%!TEX program = lualatex
+
+\documentclass{easychair}
+\include{format}
+
+\begin{document}
+
+\title{GreHack 2015 - ReverseMe}
+\titlerunning{GreHack 2015 - ReverseMe}
+
+\author{Thanh Dinh Ta\inst{1}}
+\authorrunning{Thanh Dinh Ta}
+
+\institute{Verimag}
+
+\clearpage
+\maketitle
+
+\section{Reversing}
+The challenge is a $32$ bit ELF binary, a quick behavior analysis shows that it asks for a single input: if the number of arguments is $0$ or more than $1$ then the program prints out the message: \texttt{Format}. Our goal would be to find out an input so that the program prints out some message different than: \texttt{Wrong!}.
+
+Using IDA (evaluation version is enough) to examine the challenge, we quickly recognize that the crackme contains most of self-modifying codes: the next block of instructions is visible only by the execution of existing instructions; so disassembling does not give much information. Running it step by step, we get quickly bored since the interesting instructions seem to be hidden under several layers of \texttt{xor} decryption.~\Cref{fig:first2blocks} shows only first $2$ layer of decryption; in fact, as can be observed in~\Cref{fig:checkparams}, the first interesting instructions are visible only at the basic block $112$!!!.
+
+\begin{figure}[ht]
+  \centering
+  \begin{subfigure}[b]{0.5\textwidth}
+    \centering
+    \includegraphics[width=1.0\textwidth,keepaspectratio]{first_blocks.png}
+    \caption{First $2$ \texttt{xor} decryption loops}
+    \label{fig:first2blocks}
+  \end{subfigure}%
+  \begin{subfigure}[b]{0.5\textwidth}
+    \centering
+    \includegraphics[width=1.0\textwidth,keepaspectratio]{check_param.png}
+    \caption{Instructions check number of input arguments}
+    \label{fig:checkparams}
+  \end{subfigure}
+  \caption{Initial analysis}
+\end{figure}
+
+A direct black-box attack (e.g. using \texttt{perf} to count the number of executed instructions when the crackme consumes an input string\footnote{See the script of \emph{jvoisin} at \url{https://dustri.org/b/defeating-the-recons-movfuscator-crackme.html}}) seems not work, for example the number of executed instructions if input is any printable character is always $40681$.
+
+\section{Differential analysis}
+We develop in Binsec project~\autocite{binsec} a Pin-based~\autocite{LukCMPKLWRH05} tracing tool with powerful functionalities, we use here only a simple one: tracing the list of executed instructions and some concrete information of each instruction: read/write values on registers and memory addresses.
+
+Let's tracing the crackme with two different inputs, e.g. ``a'' and ``Ab'', observing the difference between two traces (both of them are of length $40681$),  \emph{we obtain immediately the result}. Since the instructions used in \texttt{xor} decryption loops are identical in both traces, the only difference is at the execution of instructions handling the input.~\Cref{fig:firstdiff} shows the first difference, we recognize immediately that the first byte of input string is xored with $0\mathtt{x}41$. There are $28$ such a difference, next is a comparison to check whether the $29$-th input character is $0$ or not, so we can guess that the good input should have length $28$; tracing the crackme with an input of length $28$ confirms this guess (see~\Cref{fig:checkinput}). We observe also that, if the input length is $28$ then each byte of xored input string is compared with $0$; so the \texttt{OCaml} program in~\Cref{lst:keygen} calculates the good input string based on $28$ differences observed.
+
+\begin{figure}[ht]
+  \centering
+  \includegraphics[width=1.0\textwidth,keepaspectratio]{compare_first.png}
+  \caption{Difference reveals interesting instruction}
+  \label{fig:firstdiff}
+\end{figure}
+
+\begin{figure}[ht]
+  \centering
+  \includegraphics[width=0.5\textwidth,keepaspectratio]{check_input.png}
+  \caption{Check input length and value}
+  \label{fig:checkinput}
+\end{figure}
+
+\begin{lstlisting}[frame=single, caption={Calculate good input}, captionpos=b, boxpos=b, language=Caml, label=lst:keygen]
+let () =
+  let () = Printf.printf "reverseMe key: " in
+  let key_chars = ['\x41'; '\x6c'; '\x70'; '\x68'; '\x34'; '\x74'; '\x33';
+                   '\x73'; '\x74'; '\x66'; '\x30'; '\x72'; '\x63'; '\x33';
+                   '\x6d'; '\x69'; '\x6c'; '\x6c'; '\x65'; '\x21'; '\x21';
+                   '\x21'; '\x21'; '\x21'; '\x21'; '\x21'; '\x21'; '\x21']
+  in
+  List.iter (fun ch -> Printf.printf "%c" ch) key_chars
+\end{lstlisting}
+
+The program gives the key \texttt{Alph4t3stf0rc3mille!!!!!!!!!}, using it as the input for crackme we get \texttt{Well done!}.
+
+% \begin{figure}[ht]
+%   \centering
+%   \includegraphics[width=0.5\textwidth,keepaspectratio]{reverseMe.png}
+%   \caption{Good input}
+%   % \label{fig:checkinput}
+% \end{figure}
+
+\section{Conclusion}
+This is very nice crackme, using the same principle, we think that the author can give more difficult challenges (for this case, we get the good input in about $30$ minutes). Our approach is similar with one of our friend Aurélien of Airbus team, he has used directly \texttt{gdb} to get the trace, so this is much more cool \smiley{}. 
+ % give the detail analysis just to understand how the crackme works
+
+\printbibliography
+
+\end{document} 
