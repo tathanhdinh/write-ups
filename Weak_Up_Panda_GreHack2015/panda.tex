@@ -99,7 +99,7 @@ The computation on each character is dispersed over only several instructions (a
 \end{lstlisting}
 
 \paragraph{Checksum algorithm}
-Each loop consume a character of \texttt{INPUT}, this character and an additional value are used to calculate a checksum; this checksum is used as the additional value for the next loop. In summary, the checksum is calculated by:
+In each loop, a character of \texttt{INPUT} and an additional value are used to calculate a checksum; this checksum is used as the additional value for the next loop. In summary, the checksum is calculated by:
 \begin{lstlisting}[frame=lines, caption={Calculating checksum}, captionpos=b, boxpos=b, language={[x86masm]Assembler}, label=lst:checksumcalculation]
 \end{lstlisting}
 then is verified by (see also~\Cref{lst:checksumverificationcode}):
