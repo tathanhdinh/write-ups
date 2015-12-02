@@ -22,7 +22,7 @@ The challenge is a $64$ bit ELF binary, when executes, it prints \texttt{badboy}
 \begin{lstlisting}[frame=lines, caption={Setting \texttt{INPUT}}, captionpos=b, boxpos=b, language=bash, label=lst:keygen]
 set -x INPUT abcdef
 \end{lstlisting}
-and execute the crackme again (cf.~\Cref{fig:set_input}); still \texttt{badboy} though. There is no useful information yet, except that there are two \texttt{rand} calls, each followed by a \texttt{malloc}, maybe for storing the returned values of \texttt{rand}(s) (?); but we do not sure at this step \blacksmiley{}.
+and execute the crackme again (cf.~\Cref{fig:set_input}); still \texttt{badboy} though. There is no useful information yet, except that there are two \texttt{rand} calls, each followed by a \texttt{malloc}, maybe for storing the returned values of \texttt{rand}(s) (?); but we are not sure at this step \blacksmiley{}.
 
 \begin{figure}[ht]
   \centering
