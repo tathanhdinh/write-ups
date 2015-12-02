@@ -115,7 +115,7 @@ then is verified by (see also~\Cref{lst:checksumverificationcode}):
 Once the checksum calculation and verification are known, the calculation for good input is direct. We give a file \texttt{panda.smt2}\footnote{\url{https://github.com/tathanhdinh/write-ups/blob/master/Weak\_Up\_Panda\_GreHack2015/panda.smt2}} of SMT format, use \texttt{Z3} to check satisfiability and interpreted values, we obtain a value for \texttt{INPUT}: \texttt{g!r3h4ck}; that makes the crackme print: \texttt{goodboy}.
 
 \paragraph{Control flow graph reconstruction}
-We can also recover the control flow graph of this crackme (cf.~\Cref{fig:cfg}) using tools of BinSec\autocite{binsec}. The CFG is quite simple (so the obfuscation's purpose is not the CFG) but one should notice that each basic block consists dozens of thousand instructions.
+We can also recover the control flow graph of this crackme (cf.~\Cref{fig:cfg}) using tools of BinSec~\autocite{binsec}. The CFG is quite simple (so the obfuscation's purpose is not the CFG) but one should notice that each basic block may consist of dozens of thousand instructions.
 
 \begin{figure}[ht]
   \centering
