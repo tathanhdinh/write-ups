@@ -106,6 +106,15 @@ then is verified by (see also~\Cref{lst:checksumverificationcode}):
 \begin{lstlisting}[frame=lines, caption={Verifying checksum}, captionpos=b, boxpos=b, language={[x86masm]Assembler}, label=lst:checksumverification]
 \end{lstlisting}
 
+\begin{table}[h]
+  \centering
+  \begin{tabular}{ | l | c | c | c | c | c | c | c | c | c | c | c | c | c | c | c |}
+    \hline
+    start & \texttt{0x4278d4} & \\ \hline
+    end & \texttt{0x4278dd} & \\ \hline
+  \end{tabular}
+\end{table}
+
 \begin{lstlisting}[frame=lines, caption={Instructions verifying checksum}, captionpos=b, boxpos=b, language={[x86masm]Assembler}, label=lst:checksumverificationcode]
 0x41d74f  mov rdx, qword ptr [rax]
 0x41d752  mov rax, 0x122d4d05a4299633
