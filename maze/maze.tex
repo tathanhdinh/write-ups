@@ -109,9 +109,13 @@ We observe also that the function calls two interesting functions, one at \textt
 \label{sec:dynamic_analysis_quick}
 Now we almost sure that the function at \texttt{0x804868c} is called in the function at \texttt{0x8048990}, moreover we know already that this function simply transforms its control flow to the address referenced by its single argument. By setting a break-point at the function, we start tracing it step-by-step, and start being confused: we observe multiple \texttt{ret}(s) which go after small $3$-instructions code snippets. 
 
-We guess initially that this challenge is a kind of \emph{virtual machine}, so its form is hard to be recognized by static analysis. We have implemented a \texttt{Pintool}~\autocite{LukCMPKLWRH05} which can tracing while skipping several uninterested functions of a program (e.g.~for the case of the challenge, they are \texttt{printf}, \texttt{exit}, \texttt{sleep}), and a tool which can construct the control-flow-graph of a program from traces\footnote{For a trace, we can only recover a partial CFG of the program, the CFG constructed from several traces gives still incomplete CFG but better that one constructed from a trace.}.
+We guess initially that this challenge is a kind of \emph{virtual machine}, so its form is hard to be recognized by static analysis. We have implemented a \texttt{Pintool}~\autocite{LukCMPKLWRH05} which can tracing while skipping several uninterested functions of a program (e.g.~for the case of the challenge, they are \texttt{printf}, \texttt{exit}, \texttt{sleep}), and a tool which can construct the control-flow-graph of a program from traces\footnote{The CFG constructed from traces is partial, i.e.~it is only a subgraph of the real CFG, but it is also a sound approximation of the real CFG of the program.}.
 
-There is a problem that the calls to \texttt{sleep} will slow down the tracing process, so we use the standard \texttt{LD\_PRELOAD} trick to bypass this function. We implement an empty \texttt{sleep}, compile it as a shared library and set \texttt{LD\_PRELOAD} to the compiled file (c.f.~\Cref{fig:sleep}).
+\begin{remark}
+  The tools discussed above are obviously not implemented in the interview time: we have implemented them previously.
+\end{remark}
+
+There is a problem that the calls to \texttt{sleep} will slow down the tracing process, so we use the standard \texttt{LD\_PRELOAD} trick to bypass this function: an empty \texttt{sleep} is implemented, compiled as a shared library and \texttt{LD\_PRELOAD} is set to the compiled file (c.f.~\Cref{fig:sleep}).
 \begin{listing}
   \begin{minted}[frame=lines,tabsize=2]{c}
 unsigned int sleep(unsigned int nb_sec)
