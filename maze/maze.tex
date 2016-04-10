@@ -25,13 +25,14 @@
 \maketitle
 
 \begin{abstract}
-  Manually resolving a reverse engineering challenge is not a linear process, particularly in the case the challenge uses a execution model which is not familiar with the analyzer. We present below our process of analyzing a challenge which uses return-oriented programming technique.
+  Solving a reverse engineering challenge is like mathematical problem solving, it is not a linear process. Particularly in the case the challenge uses a execution model which is not familiar with the analyzer. We present below our process of analyzing a challenge which uses return-oriented programming technique.
 \end{abstract}
 
 \section{Introduction}
 \label{sec:introduction}
 
-The challenge analyzed here is what I have to deal with in the job interview at TETRANE.~It is a 32-bit \texttt{ELF} binary named \texttt{mecung}. I cannot resolve the challenge on the time of interview, I have been so nervous with the idea that I must be rejected if cannot finding out the correct key for the challenge. In the rest of this section I try to present several approaches that I have used in the interview, the failures and the lessons learned.
+The challenge analyzed here is what I have to deal with in the job interview at TETRANE.~It is a 32-bit \texttt{ELF} binary named \texttt{mecung}. I cannot resolve the challenge on the time of interview, but in the rest of this section I try to present several approaches that I have used in the interview, the failures and the lessons learned.
+% I have been so nervous with the idea that I must be rejected if cannot finding out the correct key for the challenge.
 % which means \texttt{maze} in Vietnamese: Samuel (the interviewer) knows that I am Vietnamese then he might decide to give me some hints.
 % \begin{quote}
 %   Sam: Hey, does ``me cung'' mean something in Vietnamese?\newline
@@ -48,12 +49,13 @@ Running the challenge, we\footnote{Here, ``we'' implies the person being intervi
 \begin{listing}[h]
   \begin{minted}[frame=lines,tabsize=2]{bash}
 ./mecung.elf sdfs
+
 Oops, try again
   \end{minted}
   \caption{Requesting a serial as input argument}
   \label{fig:serial_request}
 \end{listing}
-A traditional approach in trying to get more information is to run the binary under some standard tracer, we try with \texttt{ltrace} and get the input as in~\Cref{fig:running_ltrace}. We are lucky here, from the tracing result, we know that the binary requests the environment variable \texttt{SHOW\_ME\_THE\_MECUNG}.
+A traditional approach in trying to get more information is to run the binary under some standard tracer, we try with \texttt{ltrace} and get the input as in~\Cref{fig:running_ltrace}. We get lucky here, from the tracing result, we know that the binary requests the environment variable \texttt{SHOW\_ME\_THE\_MECUNG}.
 \begin{listing}[h]
   \begin{minted}[frame=lines,tabsize=2]{bash}
 ltrace ./mecung.elf sfsdf
@@ -84,7 +86,7 @@ Oops, try again
   \end{minted}
 \end{listing}
 
-This is a maze, with a blink and colored star, but nothing more; we temporarily stop with this behavior analysis and come back to the binary.
+This is a maze, with a blink and colored star and a weirdly question mark, but nothing more. We temporarily stop with this behavior analysis and come back to the binary.
 
 \subsection{Static analysis}
 \label{sec:static_analysis_quick}
@@ -93,26 +95,30 @@ The main function is found at \texttt{0x80488ef}, it calls a two-arguments funct
 
 We do not know where the maze and the string ``\texttt{Oops, try again}'' are printed out, then look into the \texttt{strings} of the binary, we jump to the address \texttt{0x8048e6f} which contains the string, and it is referenced from the instruction \texttt{push} at \texttt{0x80487e6}. The instruction is located in a function at \texttt{0x804868c}.
 
-Looking into the function at \texttt{0x804868c}, it is direct to understand why the maze is printed only when the environment variable \texttt{SHOW\_ME\_THE\_MECUNG}, and it is printed out by a function at \texttt{0x80485e5} (which is called by the function at \texttt{0x804868c}). We observe also the location where a string ``\texttt{Well done!}'' is printed out, this is obviously the location we have to reach (by giving a good serial)\footnote{By setting a break-point at the function, we know that this is the single function where the string ``\texttt{Oops, try again}'' (and maybe ``\texttt{Well done!}'' also) is printed out.}. There are two questions must be answered here:
+Looking into the function at \texttt{0x804868c}, it is direct to understand why the maze is printed only when the environment variable \texttt{SHOW\_ME\_THE\_MECUNG}, and it is printed out by a function at \texttt{0x80485e5} (which is called by the function at \texttt{0x804868c}). We observe also the location where a string ``\texttt{Well done!}'' is printed out, this is obviously the location we have to reach (by giving a good serial). There are two questions must be answered here:
 \begin{itemize}
-\item where and when is the function at \texttt{0x804868c} called?, and
-\item what is its semantics and the relation between this function and the serial input argument?
+\item[1.] where and when is the function at \texttt{0x804868c} called?, and
+\item[2.] what is its semantics and how does it relate with the serial input argument?
 \end{itemize}
 
 % But there are two main problems here: $(1)$ we still do not know where and when the function \texttt{0x804868c} is called; though by setting a break-point at it, we know that this is the single function where the string ``\texttt{Oops, try again}'' is printed out. More importantly, $(2)$ we still also do not understand the relation between this function and the serial input argument.
 
-As previously mentioned, there are two functions called by \texttt{main}: one at \texttt{0x80487fd} and the other at \texttt{0x8048990}. Looking into the function at \texttt{0x804896c}, we do not see any non-local control flow, by setting a break-point at the instruction at \texttt{0x8048971} we observe that when executing to this instruction, there are no output printed out yet: so the function at \texttt{0x804868c} must be called from somewhere in the function at \texttt{0x8048990}.
+As previously mentioned, there are two functions called by \texttt{main}: one at \texttt{0x80487fd} and the other at \texttt{0x8048990}. Looking into the function at \texttt{0x804896c}, we cannot see any non-local control flow; moreover by setting a break-point at the instruction at \texttt{0x8048971} we observe that when executing to this instruction, there are no output printed out yet: so the function at \texttt{0x804868c} must be called from somewhere in the function at \texttt{0x8048990}.
 
 We observe also that the function calls two interesting functions, one at \texttt{0x804874f} and the other at \texttt{0x8048782}. We guess that the latter (i.e.~one at \texttt{0x8048782}) is not important since it has no return value, and it seems to print the colored \texttt{star} only. The former is more complicated and more interesting, it is a $3$-arguments functions and contains many checks, but we do not understand their semantics yet.
 
 \subsection{Dynamic analysis}
 \label{sec:dynamic_analysis_quick}
-Now we almost sure that the function at \texttt{0x804868c} is called in the function at \texttt{0x8048990}, moreover we know already that this function simply transforms its control flow to the address referenced by its single argument. By setting a break-point at the function, we start tracing it step-by-step, and start being confused: we observe multiple \texttt{ret}(s) which go after small $3$-instructions code snippets. 
+Now we almost sure (c.f.~\Cref{rem:print_out_location}) that the function at \texttt{0x804868c} is called in the function at \texttt{0x8048990}, moreover we know already that this function simply transforms its control flow to the address referenced by its single argument. By setting a break-point at the function, we start tracing it step-by-step, and start being confused: we observe multiple \texttt{ret}(s) which go after small $3$-instructions code snippets, moreover the instructions of the block at \texttt{0x804899a} is repeatedly executed.
 
-We guess initially that this challenge is a kind of \emph{virtual machine}, so its form is hard to be recognized by static analysis. We have implemented a \texttt{Pintool}~\autocite{LukCMPKLWRH05} which can tracing while skipping several uninterested functions of a program (e.g.~for the case of the challenge, they are \texttt{printf}, \texttt{exit}, \texttt{sleep}), and a tool which can construct the control-flow-graph of a program from traces\footnote{The CFG constructed from traces is partial, i.e.~it is only a subgraph of the real CFG, but it is also a sound approximation of the real CFG of the program.}.
+\begin{remark}\label{rem:print_out_location}
+  By setting a break-point at the function, we know that this is the single function where the string ``\texttt{Oops, try again}'' (and maybe ``\texttt{Well done!}'' also) is printed out.
+\end{remark}
+
+We guess initially that this challenge is a kind of \emph{virtual machine}, so its form is hard to be recognized by static analysis. We have implemented a \texttt{Pintool}~\autocite{LukCMPKLWRH05} which can tracing while skipping several uninterested functions of a program (e.g.~for the case of the challenge, they are \texttt{printf}, \texttt{exit}, \texttt{sleep}), and a tool which can construct the control-flow-graph of a program from traces\footnote{The tools discussed above are obviously not implemented in the interview time: we have implemented them previously in our personal toolbox.}.
 
 \begin{remark}
-  The tools discussed above are obviously not implemented in the interview time: we have implemented them previously.
+  The CFG constructed from traces is partial, i.e.~it is only a subgraph of the real CFG, but it is also a sound approximation of the real CFG of the program.
 \end{remark}
 
 There is a problem that the calls to \texttt{sleep} will slow down the tracing process, so we use the standard \texttt{LD\_PRELOAD} trick to bypass this function: an empty \texttt{sleep} is implemented, compiled as a shared library and \texttt{LD\_PRELOAD} is set to the compiled file (c.f.~\Cref{fig:sleep}).
@@ -125,14 +131,14 @@ unsigned int sleep(unsigned int nb_sec)
 gcc -m32 -shared -fPIC -Wall sleep.c -o sleep.o
 set -x LD_PRELOAD /home/bigraph/Documents/Research/sleep.o
   \end{minted}
-  \caption{\texttt{sleep.c}}
+  \caption{Fake \texttt{sleep}}
   \label{fig:sleep}
 \end{listing}
 Start tracing the binary with several random inputs, we obtained a partial CFG show in~\Cref{fig:partial_cfg}; but now we are confused: where does this virtual machine come from? 
 
 \begin{figure}[h]
   \centering
-  \includegraphics[width=0.75\textwidth,keepaspectratio]{mecung.pdf}
+  \includegraphics[width=0.8\textwidth,keepaspectratio]{mecung.pdf}
   \caption{Partial CFG}
   \label{fig:partial_cfg}
 \end{figure}
@@ -141,14 +147,84 @@ Start tracing the binary with several random inputs, we obtained a partial CFG s
 \label{sec:other_behavior_analysis}
 No answer given in~\Cref{sec:static_analysis_quick} is solved, and even more questions are posed. We hopelessly observe the mazes shown by the challenge from different inputs, sometimes the star is displayed with different positions and locations, but nothing is clear.
 
-\subsection{Lessons learned}
-I cannot resolve the challenge on the time of interview, though Samuel (the interviewer) has given tons of suggestions. He knows that I am Vietnamese then he gave me the first hints.
+\subsection{Failures and lessons learned}
+When starting with challenge, I though that it must be resolved on interview time if not want to be rejected. I didn't focus on detail analyzing every machine instructions, I tried instead to figure out quickly its high level semantics though its behaviors; but this approach did not work in this case: the \emph{signal-to-noise} of observing the differences between printed out mazes is so small that I can only recognize the difference but cannot figure out any useful idea.
+% I cannot resolve the challenge on the time of interview.
+
+Samuel, the interviewer, has given generously tons of suggestions. After I have discovered quickly the existence of \texttt{SHOW\_ME\_THE\_MECUNG} but blocked (until the end of the interview) at understanding how the function at \texttt{0x804868c} relates with the input serial, he gave me the first hint (maybe he knows that I am Vietnamese):
 \begin{quote}
   Sam: Hey, does ``me cung'' mean something in Vietnamese?\newline
   Me: Well, that means ``maze''.\newline
   Sam: This is a hint for you. 
 \end{quote}
-I do not understand what does it means, then I have tried some serials: \texttt{mecung}, \texttt{labyrinth}, \texttt{maze}, etc., but nothing works, obviously :(. He explained me how the function at \texttt{0x8048990} can execute $3$-instructions code snippets by ``unrolling''  the stack organized by the function at \texttt{0x80487fd}. But I did not capture his suggestions, and could not complete the challenge :(.
+I do not quite understand what does it means, then I have tried naively some serials: \texttt{mecung}, \texttt{labyrinth}, \texttt{maze}, etc., but nothing works, obviously. 
+
+Samuel noticed me the relation between the functions at \texttt{0x8048990} and at \texttt{0x80487fd}: they share indeed an argument. He then explained how the later can execute $3$-instructions code snippets by ``unrolling''  the stack organized by the former; but I could not grasp his suggestions to tackle the challenge :(.
+
+% \paragraph{Lessons}
+It should be better if we focus on the function at \texttt{0x80487fd} since the ``stack unrolling'' mechanism reveals the \emph{execution model} of the program, understanding this model is one of the keys to solve the challenge.
+
+\section{Return-oriented programming}
+\label{sec:detail_analysis}
+
+In this section, we present a complete analysis which reveals the execution model of the challenge, then allows us to get a correct serial input. The analysis is done after the interview.
+
+\subsection{Execution model}
+\label{sec:execution_model}
+
+As suggested by Samuel, the ``stack unrolling'' mechanism of the function at \texttt{0x80487fd} is a kind of \emph{object-oriented programming}~\autocite{shacham2007geometry} where each $3$-instructions (and a followed \texttt{ret}) code snippet is called a \emph{gadget}, some of them can be observed in~\Cref{fig:partial_cfg}. 
+The execution model of the binary is realized by two function: one at \texttt{0x80487fd}, we named \texttt{execute\_rop\_table}; the other at \texttt{0x80487fd}, named \texttt{setup\_rop\_table}.
+
+The function \texttt{execute\_rop\_table} transfers the control flow to the address contained in the first entry of a \emph{rop table} passed through its single argument. This address points to a gadget which ends with a \texttt{ret} instruction, that means it transfers the control flow to an address (of the next gadget) contained in the next $4$ bytes higher stack address. The semantics of \texttt{execute\_rop\_table} is presented by the \texttt{C++} function in~\Cref{lst:setup_rop_table}.
+
+\begin{listing}[ht]
+  \begin{tcolorbox}
+\begin{minted}[tabsize=2]{c++}
+auto execute_rop_table(size_t* rop_table) -> void
+{
+  using rop_fun = void(*)();
+  auto entry_rop = reinterpret_cast<rop_fun>(rop_table[0]);
+  return entry_rop();
+}
+\end{minted}
+  \end{tcolorbox}
+  \caption{\texttt{setup\_rop\_table}}
+  \label{lst:setup_rop_table}
+\end{listing}
+
+\begin{remark}
+  We note also that the rop table is located on the stack since the argument (i.e.~the address of the rop table) passed into \texttt{execute\_rop\_table} is also a local parameter of \texttt{main}.
+\end{remark}
+
+The \emph{rop table} is also the second argument of \texttt{setup\_rop\_table}, looking into this function (c.f.~\Cref{lst:setup_first_twos}) we observe that the first two entries of the rop table are fixed. Indeed, the first is \texttt{0x8048997} (c.f.~the \texttt{mov} instruction at \texttt{0x804881b}) which contains, beside the last \texttt{ret} instruction, only a \texttt{pop edi}. The second is a \emph{buffer} at \texttt{0x804a1e0} (c.f.~the \texttt{mov} instruction at \texttt{0x804882b}), this buffer is then moved into \texttt{edi} since the execution of the first gadget.
+
+\begin{listing}
+  \begin{minted}[frame=lines,tabsize=2]{nasm}
+...
+0x804881b      mov     edx, offset first_rop_entry
+0x8048820      mov     [eax], edx
+0x8048822      mov     eax, [ebp+current_rop]
+0x8048825      lea     edx, [eax+4]
+0x8048828      mov     [ebp+current_rop], edx
+0x804882b      mov     edx, offset buffer
+...
+  \end{minted}
+  \caption{Setup first two instructions}
+  \label{lst:setup_first_twos}
+\end{listing}
+
+\paragraph{Abstract machine}
+In summary, the binary has implemented actually by an \emph{abstract machine} whose opcodes are stored sequentially in the stack.
+\begin{figure}[h]
+  \centering
+  \begin{tikzpicture}
+    \node[draw,align=center,minimum height=0.75cm,minimum width=7cm] (entry_point) at (0, 0) {first gadget (entry point)};
+    \node[draw,align=center,minimum height=0.75cm,minimum width=7cm] (entry_point) at (0, 0.75) {buffer};
+    \node[draw,align=center,minimum height=0.75cm,minimum width=7cm] (entry_point) at (0, 1.5) {second gadget};
+  \end{tikzpicture}
+  \caption{Execution model}
+  \label{fig:execution_model}
+\end{figure}
 
 \printbibliography
 
