@@ -1,0 +1,151 @@
+%!TEX root = maze.tex
+%!TEX program = lualatex
+%!TEX encoding = utf-8
+%!TEX spellcheck = en_US
+
+\documentclass{easychair}
+\include{format}
+
+\begin{document}
+
+\title{Maze challenge}
+\titlerunning{Maze challenge}
+
+\author{
+  Thanh Dinh Ta\inst{1}
+}
+
+\institute{
+  Verimag
+}
+
+\authorrunning{T. D. Ta}
+
+\clearpage
+\maketitle
+
+\begin{abstract}
+  Manually resolving a reverse engineering challenge is not a linear process, particularly in the case the challenge uses a execution model which is not familiar with the analyzer. We present below our process of analyzing a challenge which uses return-oriented programming technique.
+\end{abstract}
+
+\section{Introduction}
+\label{sec:introduction}
+
+The challenge analyzed here is what I have to deal with in the job interview at TETRANE.~It is a 32-bit \texttt{ELF} binary named \texttt{mecung}. I cannot resolve the challenge on the time of interview, I have been so nervous with the idea that I must be rejected if cannot finding out the correct key for the challenge. In the rest of this section I try to present several approaches that I have used in the interview, the failures and the lessons learned.
+% which means \texttt{maze} in Vietnamese: Samuel (the interviewer) knows that I am Vietnamese then he might decide to give me some hints.
+% \begin{quote}
+%   Sam: Hey, does ``me cung'' mean something in Vietnamese?\newline
+%   Me: Well, that means ``maze''.\newline
+%   Sam: This is a hint for you. 
+% \end{quote}
+% Though Samuel has given me tons of suggestions,
+
+
+\subsection{Behavior analysis}
+\label{sec:work_around}
+
+Running the challenge, we\footnote{Here, ``we'' implies the person being interviewed, so that means indeed ``I''. The interviewers are experienced reversers, they are familiar already with the techniques of the challenge and obviously have not any problem as presented in the document.} know that it requests a serial as input argument; try with a random serial we get the result~\Cref{fig:serial_request}, so no useful information obtained.
+\begin{listing}[h]
+  \begin{minted}[frame=lines,tabsize=2]{bash}
+./mecung.elf sdfs
+Oops, try again
+  \end{minted}
+  \caption{Requesting a serial as input argument}
+  \label{fig:serial_request}
+\end{listing}
+A traditional approach in trying to get more information is to run the binary under some standard tracer, we try with \texttt{ltrace} and get the input as in~\Cref{fig:running_ltrace}. We are lucky here, from the tracing result, we know that the binary requests the environment variable \texttt{SHOW\_ME\_THE\_MECUNG}.
+\begin{listing}[h]
+  \begin{minted}[frame=lines,tabsize=2]{bash}
+ltrace ./mecung.elf sfsdf
+__libc_start_main([ "./mecung.elf", "sfsdf" ] <unfinished ...>
+getenv("SHOW_ME_THE_MECUNG")                                                                                           = nil
+fwrite("\nOops, try again\n", 1, 17, 0xf7750e80
+Oops, try again
+)                                                                       = 17
+exit(1 <no return ...>
++++ exited (status 1) +++
+  \end{minted}
+  \caption{Running under \texttt{ltrace}}
+  \label{fig:running_ltrace}
+\end{listing}
+We then set the variable and trace the binary again, this time it shows a more interesting output:
+\begin{listing}[h]
+  \begin{minted}[frame=lines,tabsize=2]{bash}
+set -x SHOW_ME_THE_MECUNG sfsdf
+./mecung.elf sfsdf
+#######
+#*#   #
+#   # #
+##### #
+#?    #
+#######
+
+Oops, try again
+  \end{minted}
+\end{listing}
+
+This is a maze, with a blink and colored star, but nothing more; we temporarily stop with this behavior analysis and come back to the binary.
+
+\subsection{Static analysis}
+\label{sec:static_analysis_quick}
+
+The main function is found at \texttt{0x80488ef}, it calls a two-arguments function at \texttt{0x804896c} and another one-argument function at \texttt{0x804897b}. For the function at \texttt{0x804896c}, its first input is also the pointer to the buffer of the input serial, it parse also the serial character-by-character. For the function at \texttt{0x804897b}, it switches its argument with \texttt{esp}, so the purpose is to jump to the address stored at the argument.
+
+We do not know where the maze and the string ``\texttt{Oops, try again}'' are printed out, then look into the \texttt{strings} of the binary, we jump to the address \texttt{0x8048e6f} which contains the string, and it is referenced from the instruction \texttt{push} at \texttt{0x80487e6}. The instruction is located in a function at \texttt{0x804868c}.
+
+Looking into the function at \texttt{0x804868c}, it is direct to understand why the maze is printed only when the environment variable \texttt{SHOW\_ME\_THE\_MECUNG}, and it is printed out by a function at \texttt{0x80485e5} (which is called by the function at \texttt{0x804868c}). We observe also the location where a string ``\texttt{Well done!}'' is printed out, this is obviously the location we have to reach (by giving a good serial)\footnote{By setting a break-point at the function, we know that this is the single function where the string ``\texttt{Oops, try again}'' (and maybe ``\texttt{Well done!}'' also) is printed out.}. There are two questions must be answered here:
+\begin{itemize}
+\item where and when is the function at \texttt{0x804868c} called?, and
+\item what is its semantics and the relation between this function and the serial input argument?
+\end{itemize}
+
+% But there are two main problems here: $(1)$ we still do not know where and when the function \texttt{0x804868c} is called; though by setting a break-point at it, we know that this is the single function where the string ``\texttt{Oops, try again}'' is printed out. More importantly, $(2)$ we still also do not understand the relation between this function and the serial input argument.
+
+As previously mentioned, there are two functions called by \texttt{main}: one at \texttt{0x80487fd} and the other at \texttt{0x8048990}. Looking into the function at \texttt{0x804896c}, we do not see any non-local control flow, by setting a break-point at the instruction at \texttt{0x8048971} we observe that when executing to this instruction, there are no output printed out yet: so the function at \texttt{0x804868c} must be called from somewhere in the function at \texttt{0x8048990}.
+
+We observe also that the function calls two interesting functions, one at \texttt{0x804874f} and the other at \texttt{0x8048782}. We guess that the latter (i.e.~one at \texttt{0x8048782}) is not important since it has no return value, and it seems to print the colored \texttt{star} only. The former is more complicated and more interesting, it is a $3$-arguments functions and contains many checks, but we do not understand their semantics yet.
+
+\subsection{Dynamic analysis}
+\label{sec:dynamic_analysis_quick}
+Now we almost sure that the function at \texttt{0x804868c} is called in the function at \texttt{0x8048990}, moreover we know already that this function simply transforms its control flow to the address referenced by its single argument. By setting a break-point at the function, we start tracing it step-by-step, and start being confused: we observe multiple \texttt{ret}(s) which go after small $3$-instructions code snippets. 
+
+We guess initially that this challenge is a kind of \emph{virtual machine}, so its form is hard to be recognized by static analysis. We have implemented a \texttt{Pintool}~\autocite{LukCMPKLWRH05} which can tracing while skipping several uninterested functions of a program (e.g.~for the case of the challenge, they are \texttt{printf}, \texttt{exit}, \texttt{sleep}), and a tool which can construct the control-flow-graph of a program from traces\footnote{For a trace, we can only recover a partial CFG of the program, the CFG constructed from several traces gives still incomplete CFG but better that one constructed from a trace.}.
+
+There is a problem that the calls to \texttt{sleep} will slow down the tracing process, so we use the standard \texttt{LD\_PRELOAD} trick to bypass this function. We implement an empty \texttt{sleep}, compile it as a shared library and set \texttt{LD\_PRELOAD} to the compiled file (c.f.~\Cref{fig:sleep}).
+\begin{listing}
+  \begin{minted}[frame=lines,tabsize=2]{c}
+unsigned int sleep(unsigned int nb_sec)
+{
+  return 0;
+}
+gcc -m32 -shared -fPIC -Wall sleep.c -o sleep.o
+set -x LD_PRELOAD /home/bigraph/Documents/Research/sleep.o
+  \end{minted}
+  \caption{\texttt{sleep.c}}
+  \label{fig:sleep}
+\end{listing}
+Start tracing the binary with several random inputs, we obtained a partial CFG show in~\Cref{fig:partial_cfg}; but now we are confused: where does this virtual machine come from? 
+
+\begin{figure}[h]
+  \centering
+  \includegraphics[width=0.75\textwidth,keepaspectratio]{mecung.pdf}
+  \caption{Partial CFG}
+  \label{fig:partial_cfg}
+\end{figure}
+
+\subsection{Other behavior analysis}
+\label{sec:other_behavior_analysis}
+No answer given in~\Cref{sec:static_analysis_quick} is solved, and even more questions are posed. We hopelessly observe the mazes shown by the challenge from different inputs, sometimes the star is displayed with different positions and locations, but nothing is clear.
+
+\subsection{Lessons learned}
+I cannot resolve the challenge on the time of interview, though Samuel (the interviewer) has given tons of suggestions. He knows that I am Vietnamese then he gave me the first hints.
+\begin{quote}
+  Sam: Hey, does ``me cung'' mean something in Vietnamese?\newline
+  Me: Well, that means ``maze''.\newline
+  Sam: This is a hint for you. 
+\end{quote}
+I do not understand what does it means, then I have tried some serials: \texttt{mecung}, \texttt{labyrinth}, \texttt{maze}, etc., but nothing works, obviously :(. He explained me how the function at \texttt{0x8048990} can execute $3$-instructions code snippets by ``unrolling''  the stack organized by the function at \texttt{0x80487fd}. But I did not capture his suggestions, and could not complete the challenge :(.
+
+\printbibliography
+
+\end{document}
