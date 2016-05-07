@@ -25,7 +25,7 @@
 \maketitle
 
 \begin{abstract}
-  Solving a reverse engineering challenge is like mathematical problem solving, it is not a linear process. Particularly in the case the challenge uses a execution model which is not familiar with the analyzer. We present below our process of analyzing a challenge which uses return-oriented programming technique.
+  Solving a reverse engineering challenge is not a linear process. Particularly in the case the challenge uses a execution model which is not familiar with the analyzer. We present below an analysis for a challenge which uses return-oriented programming technique.
 \end{abstract}
 
 \section{Introduction}
@@ -84,9 +84,11 @@ set -x SHOW_ME_THE_MECUNG sfsdf
 
 Oops, try again
   \end{minted}
+  \caption{Showing the maze}
+  \label{fig:show_maze}
 \end{listing}
 
-This is a maze, with a blink and colored star and a weirdly question mark, but nothing more. We temporarily stop with this behavior analysis and come back to the binary.
+This is a maze, with a blink and colored star and a weird question mark, but nothing more. We temporarily stop with this behavior analysis and come back to the binary.
 
 \subsection{Static analysis}
 \label{sec:static_analysis_quick}
@@ -109,10 +111,10 @@ We observe also that the function calls two interesting functions, one at \textt
 
 \subsection{Dynamic analysis}
 \label{sec:dynamic_analysis_quick}
-Now we almost sure (c.f.~\Cref{rem:print_out_location}) that the function at \texttt{0x804868c} is called in the function at \texttt{0x8048990}, moreover we know already that this function simply transforms its control flow to the address referenced by its single argument. By setting a break-point at the function, we start tracing it step-by-step, and start being confused: we observe multiple \texttt{ret}(s) which go after small $3$-instructions code snippets, moreover the instructions of the block at \texttt{0x804899a} is repeatedly executed.
+We are almost sure that the function at \texttt{0x804868c} is called only in the function at \texttt{0x8048990} (c.f.~\Cref{rem:print_out_location}), moreover we know already that this function simply transforms its control flow to the address referenced by its single argument. By setting a break-point at the function, we start tracing it step-by-step, and get confused: we observe multiple \texttt{ret}(s) which go after small $3$-instructions code snippets, moreover the instructions of the block at \texttt{0x804899a} is repeatedly executed.
 
 \begin{remark}\label{rem:print_out_location}
-  By setting a break-point at the function, we know that this is the single function where the string ``\texttt{Oops, try again}'' (and maybe ``\texttt{Well done!}'' also) is printed out.
+  By setting a break-point at the function, we know that this is the single location where the string ``\texttt{Oops, try again}'' (and maybe ``\texttt{Well done!}'' also) is printed out.
 \end{remark}
 
 We guess initially that this challenge is a kind of \emph{virtual machine}, so its form is hard to be recognized by static analysis. We have implemented a \texttt{Pintool}~\autocite{LukCMPKLWRH05} which can tracing while skipping several uninterested functions of a program (e.g.~for the case of the challenge, they are \texttt{printf}, \texttt{exit}, \texttt{sleep}), and a tool which can construct the control-flow-graph of a program from traces\footnote{The tools discussed above are obviously not implemented in the interview time: we have implemented them previously in our personal toolbox.}.
@@ -128,11 +130,12 @@ unsigned int sleep(unsigned int nb_sec)
 {
   return 0;
 }
-gcc -m32 -shared -fPIC -Wall sleep.c -o sleep.o
+gcc -m32 -shared -fPIC -o sleep.o sleep.c
 set -x LD_PRELOAD /home/bigraph/Documents/Research/sleep.o
   \end{minted}
   \caption{Fake \texttt{sleep}}
   \label{fig:sleep}
+% gcc -m32 -shared -fPIC -Wall -o sleep.o sleep.c
 \end{listing}
 Start tracing the binary with several random inputs, we obtained a partial CFG show in~\Cref{fig:partial_cfg}; but now we are confused: where does this virtual machine come from? 
 
@@ -145,24 +148,22 @@ Start tracing the binary with several random inputs, we obtained a partial CFG s
 
 \subsection{Other behavior analysis}
 \label{sec:other_behavior_analysis}
-No answer given in~\Cref{sec:static_analysis_quick} is solved, and even more questions are posed. We hopelessly observe the mazes shown by the challenge from different inputs, sometimes the star is displayed with different positions and locations, but nothing is clear.
+No answer given in~\Cref{sec:static_analysis_quick} is solved yet, and even more questions are posed. We hopelessly observe the mazes shown by the challenge from different inputs, sometimes the star is displayed on different positions and with different colors, but nothing is clear.
 
-\subsection{Failures and lessons learned}
-When starting with challenge, I though that it must be resolved on interview time if not want to be rejected. I didn't focus on detail analyzing every machine instructions, I tried instead to figure out quickly its high level semantics though its behaviors; but this approach did not work in this case: the \emph{signal-to-noise} of observing the differences between printed out mazes is so small that I can only recognize the difference but cannot figure out any useful idea.
+\subsection{Comments}
+When starting with challenge, I though that it must be resolved on interview time if not want to be rejected. I didn't focus on detail analyzing every machine instructions, I tried instead to figure out quickly its high level semantics though its behaviors; but this approach did not work in this case: the signal-to-noise of observing the differences between printed out mazes is so small that I can only recognize the difference but cannot figure out any useful idea.
 % I cannot resolve the challenge on the time of interview.
 
-Samuel, the interviewer, has given generously tons of suggestions. After I have discovered quickly the existence of \texttt{SHOW\_ME\_THE\_MECUNG} but blocked (until the end of the interview) at understanding how the function at \texttt{0x804868c} relates with the input serial, he gave me the first hint (maybe he knows that I am Vietnamese):
+Samuele, the interviewer, has given generously tons of suggestions. After I have discovered quickly the existence of \texttt{SHOW\_ME\_THE\_MECUNG} but blocked (until the end of the interview) at understanding how the function at \texttt{0x804868c} relates with the input serial, he gave me the first hint (maybe he knows that I am Vietnamese):
 \begin{quote}
   Sam: Hey, does ``me cung'' mean something in Vietnamese?\newline
   Me: Well, that means ``maze''.\newline
   Sam: This is a hint for you. 
 \end{quote}
-I do not quite understand what does it means, then I have tried naively some serials: \texttt{mecung}, \texttt{labyrinth}, \texttt{maze}, etc., but nothing works, obviously. 
-
-Samuel noticed me the relation between the functions at \texttt{0x8048990} and at \texttt{0x80487fd}: they share indeed an argument. He then explained how the later can execute $3$-instructions code snippets by ``unrolling''  the stack organized by the former; but I could not grasp his suggestions to tackle the challenge :(.
+I did not quite understand this hint, then I have tried naively some serials: \texttt{mecung}, \texttt{labyrinth}, \texttt{maze}, etc., but nothing worked, obviously. Samuele noticed me the relation between the functions at \texttt{0x8048990} and at \texttt{0x80487fd}: they share indeed an argument. He then explained how the later can execute $3$-instructions code snippets by ``unrolling''  the stack organized by the former; but I could not grasp his suggestions to tackle the challenge :(.
 
 % \paragraph{Lessons}
-It should be better if we focus on the function at \texttt{0x80487fd} since the ``stack unrolling'' mechanism reveals the \emph{execution model} of the program, understanding this model is one of the keys to solve the challenge.
+In fact, it would be better if we focus on the function at \texttt{0x80487fd} since the ``stack unrolling'' mechanism reveals the \emph{execution model} of the program, understanding this model is one of the keys to solve the challenge.
 
 \section{Return-oriented programming}
 \label{sec:detail_analysis}
@@ -172,10 +173,10 @@ In this section, we present a complete analysis which reveals the execution mode
 \subsection{Execution model}
 \label{sec:execution_model}
 
-As suggested by Samuel, the ``stack unrolling'' mechanism of the function at \texttt{0x80487fd} is a kind of \emph{object-oriented programming}~\autocite{shacham2007geometry} where each $3$-instructions (and a followed \texttt{ret}) code snippet is called a \emph{gadget}, some of them can be observed in~\Cref{fig:partial_cfg}. 
-The execution model of the binary is realized by two function: one at \texttt{0x80487fd}, we named \texttt{execute\_rop\_table}; the other at \texttt{0x80487fd}, named \texttt{setup\_rop\_table}.
+As suggested by Samuele, the ``stack unrolling'' mechanism of the function at \texttt{0x80487fd} is a kind of \emph{return-oriented programming}~\autocite{shacham2007geometry} where each $3$-instructions (and a followed \texttt{ret}) code snippet is called a \emph{gadget}, some of them can be observed in~\Cref{fig:partial_cfg}. The execution model of the binary is realized by two function: one at \texttt{0x80487fd}, we named \texttt{execute\_rop\_table}; the other at \texttt{0x80487fd}, named \texttt{setup\_rop\_table}.
 
-The function \texttt{execute\_rop\_table} transfers the control flow to the address contained in the first entry of a \emph{rop table} passed through its single argument. This address points to a gadget which ends with a \texttt{ret} instruction, that means it transfers the control flow to an address (of the next gadget) contained in the next $4$ bytes higher stack address. The semantics of \texttt{execute\_rop\_table} is presented by the \texttt{C++} function in~\Cref{lst:setup_rop_table}.
+\paragraph{Rop table execution}
+The function \texttt{execute\_rop\_table} transfers the control flow to the address contained in the first entry of a \emph{rop table} passed through its single argument. This address points to a gadget which ends with a \texttt{ret} instruction, that means it transfers the control flow to an address (of the next gadget) contained in the next $4$ bytes higher stack address. The semantics of \texttt{execute\_rop\_table} is presented by the \texttt{C++} function in~\Cref{lst:execute_rop_table}.
 
 \begin{listing}[ht]
   \begin{tcolorbox}
@@ -188,14 +189,15 @@ auto execute_rop_table(size_t* rop_table) -> void
 }
 \end{minted}
   \end{tcolorbox}
-  \caption{\texttt{setup\_rop\_table}}
-  \label{lst:setup_rop_table}
+  \caption{\texttt{execute\_rop\_table}}
+  \label{lst:execute_rop_table}
 \end{listing}
 
 \begin{remark}
   We note also that the rop table is located on the stack since the argument (i.e.~the address of the rop table) passed into \texttt{execute\_rop\_table} is also a local parameter of \texttt{main}.
 \end{remark}
 
+\paragraph{Rop table construction}
 The \emph{rop table} is also the second argument of \texttt{setup\_rop\_table}, looking into this function (c.f.~\Cref{lst:setup_first_twos}) we observe that the first two entries of the rop table are fixed. Indeed, the first is \texttt{0x8048997} (c.f.~the \texttt{mov} instruction at \texttt{0x804881b}) which contains, beside the last \texttt{ret} instruction, only a \texttt{pop edi}. The second is a \emph{buffer} at \texttt{0x804a1e0} (c.f.~the \texttt{mov} instruction at \texttt{0x804882b}), this buffer is then moved into \texttt{edi} since the execution of the first gadget.
 
 \begin{listing}
@@ -213,18 +215,262 @@ The \emph{rop table} is also the second argument of \texttt{setup\_rop\_table}, 
   \label{lst:setup_first_twos}
 \end{listing}
 
+Other entries are computed from characters of the serial, which is also the first argument. In short, each character is used to compute an offset with then be added with the base address \texttt{0x0x80489ad}; for each input-dependent gadget added, the input-independent gadget at the address \texttt{0x804899a} is added also. The semantics of \texttt{setup\_rop\_table} is shown in~\Cref{lst:setup_rop_table}.
+
+\paragraph{Rop gadgets}
+In the function \texttt{setup\_rop\_table} (c.f.~\Cref{lst:setup_rop_table}), the address of an entry is computed from the corresponding character of the serial by:
+\begin{equation}
+  address = (char - \mathtt{0x27}) * 8 + \mathtt{0x80489ad} \label{equ:gadget_address}
+\end{equation}
+So we can find out the gadgets by disassembling addresses of form $8 * k + \mathtt{0x80489ad}$. We observe also that all gadgets have a single \texttt{ret} instruction at the end, this instruction transforms the control flow to the next gadget whose address is in the top of stack (i.e.~\texttt{[esp]}); the stack's top is incremented then. 
+% We can see the effect of control flow ).
+\begin{remark}
+  The control flow transformation between gadgets make the stack's top incremented each time $4$ bytes, that gives the effect of ``stack unrolling''.
+\end{remark}
+
 \paragraph{Abstract machine}
-In summary, the binary has implemented actually by an \emph{abstract machine} whose opcodes are stored sequentially in the stack.
+The challenge can be viewed as an ``abstract program'' executed by an \emph{abstract machine}, the opcodes (i.e.~addresses of gadgets) of the program are stored sequentially in the stack, they form the opcode table (c.f.~\Cref{fig:execution_model}). The abstract machine executes the program by \emph{fetching} an opcode, \emph{decoding} it (i.e.~jump to the address stored in the opcode), then \emph{executing} it (i.e.~execute instructions of the gadget).
+
 \begin{figure}[h]
   \centering
   \begin{tikzpicture}
     \node[draw,align=center,minimum height=0.75cm,minimum width=7cm] (entry_point) at (0, 0) {first gadget (entry point)};
     \node[draw,align=center,minimum height=0.75cm,minimum width=7cm] (entry_point) at (0, 0.75) {buffer};
     \node[draw,align=center,minimum height=0.75cm,minimum width=7cm] (entry_point) at (0, 1.5) {second gadget};
+    \node[draw,align=center,minimum height=0.75cm,minimum width=7cm] (entry_point) at (0, 2.25) {$\dots$};
+    \node[draw,align=center,minimum height=0.75cm,minimum width=7cm] (entry_point) at (0, 3) {$n$-th gadget};
+    \node[draw,align=center,minimum height=0.75cm,minimum width=7cm] (entry_point) at (0, 3.75) {$\dots$};
   \end{tikzpicture}
   \caption{Execution model}
   \label{fig:execution_model}
 \end{figure}
+
+The control flow of any program in this abstract machine is very simple: the entry point is always the first entry in the opcode table; the control flow is always transferred from one opcode into the next one in the opcode table, \emph{conditional control flow does not exist}.
+
+\begin{remark}
+  The ``abstract program'' is the opcode table, it is constructed from the input serial. This machine is not Turing complete, many algorithms cannot be implemented on it.
+\end{remark}
+
+\subsection{Cell moving and opcode semantics}
+\label{sec:opcode_semantics}
+
+As previously discussed (c.f.~\Cref{sec:static_analysis_quick}), the decision whether a serial is good or bad is realized in the function at \texttt{0x804868c}, we name it \texttt{check\_maze}; this function is indeed a gadget which is put into the rop table by \texttt{setup\_rop\_table} (c.f.~the \texttt{mov} instruction at \texttt{0x80488e3}). It is a function without argument since it is a gadget.
+
+We observe that the function accesses to a global \emph{buffer} at \texttt{0x804a1e0}, which is put into the second entry of the rop table (c.f.~\Cref{lst:setup_rop_table}). There is only one function called in \texttt{check\_maze} which uses this buffer to change the local state of \texttt{check\_maze}, this is the $3$-arguments function at \texttt{0x804853b} (c.f.~\texttt{call} instruction at \texttt{0x804874f}).
+
+The function at \texttt{0x804853b} accesses to an interesting address \texttt{0x8048e20}, which contains the \texttt{ASCII} codes of the \emph{maze}. It actually updates the \emph{position} of a cell in the maze, depending on the number of \emph{moving step}  and the \emph{moving direction}; they are passed respectively as the first, the second and the third argument of the function. Thus we name it \texttt{update\_cell\_pos}. In short, a cell will be moved several steps following the direction (up, down, left, right) until it infringes upon the wall or the number of moving step is reached; the function will return the state of the cell: whether it is free or it is in the wall. The semantics of \texttt{update\_cell\_pos} is shown in~\Cref{lst:update_cell_pos}.
+
+\paragraph{Cell moving}
+Once the semantics of \texttt{update\_cell\_pos} is revealed, the semantics of \texttt{check\_maze} becomes also clear. It moves a cell from the position $(1, 1)$ (i.e.~$row = 1$, $column = 1$) using the function \texttt{update\_cell\_pos}, the moving directions and steps are extracted from \emph{buffer} at~\texttt{0x804a1e0}. Concretely, for each $4$-bytes entry of the buffer, 
+\begin{itemize}
+\item the first represents the number of moving steps,
+\item the second represents the moving direction,
+\item the third represents the printing color of the cell,
+\end{itemize}
+and the last is not used. It stops when the cell infringes upon the wall or maximum $8$ entries are parsed; and print out ``\texttt{Well done!}'' if the last position of the cell is $(4, 1)$ ($row = 4$, $column = 1$). The semantics of \texttt{check\_maze} is shown in~\Cref{lst:check_maze}.
+
+\paragraph{Opcode semantics}
+The output is good (i.e.~``\texttt{Well done!}'') or bad (i.e.~``\texttt{Oops, try again}'') depending on the data of the buffer at \texttt{0x804a1e0}. This buffer is filled by the execution of \texttt{opcodes} in the rop table of the abstract machine: each opcode will fill next $4$ bytes in the buffer. Since we have known above how the data of the buffer is used, the semantics of each gadget (i.e.~opcode semantics) is clear:
+\begin{itemize}
+\item the value moved to \texttt{al} represents the number of moving steps,
+\item the value moved to \texttt{bl} represents the moving direction,
+\item the value moved to \texttt{cl} represents the color of the cell.
+\end{itemize}
+
+\begin{remark}
+  Between opcodes whose semantics is discussed above, we do not count the opcode whose the corresponding gadget is at \texttt{0x804899a} (c.f.~\Cref{fig:partial_cfg}), it is simply a data mover.
+\end{remark}
+
+% \paragraph{Gadget locations}
+% In the function \texttt{setup\_rop\_table} (c.f.~\Cref{lst:setup_rop_table}), the address of an entry is computed from the corresponding character of the serial by:
+% \begin{equation}
+%   address = (char - \mathtt{0x27}) * 8 + \mathtt{0x80489ad} \label{equ:gadget_address}
+% \end{equation}
+% So we can find out the gadgets by disassembling addresses of form $8 * k + \mathtt{0x80489ad}$.
+
+\subsection{Solving the challenge}
+\label{sec:solving}
+From the analysis in~\Cref{sec:execution_model}, the challenge has form of an ``abstract machine'' while the ``abstract program'' is the opcode table which is built from the input serial. In~\Cref{sec:opcode_semantics}, we know that \texttt{check\_maze} is an opcode of this abstract program, and it is indeed the \emph{last executed opcode} since the calls to \texttt{exit} function. The last executed opcode consumes the buffer at \texttt{0x804a1e0} which is filled by previously executed opcodes
+
+% This function moves a cell from the initial position $(1, 1)$ using data in the buffer at \texttt{0x804a1e0} which is filled by previously executed opcodes.
+Algorithmically speaking, the good output is reached only by a moving process, from the position $(1, 1)$ to $(4, 1)$ in the maze, which satisfies the following constraints:
+\begin{itemize}
+\item the cell must not infringe upon the wall while moving, and
+\item the moving process must be realized by no more than $8$ opcodes.
+\end{itemize}
+Looking into the form of the maze (c.f.~\Cref{fig:show_maze}), the only way to satisfy these constraints is to use the following sequence of moves:
+\begin{equation}
+  \downarrow, \rightarrow \rightarrow, \uparrow, \rightarrow \rightarrow, \downarrow \downarrow, \downarrow, \leftarrow \leftarrow, \leftarrow \leftarrow \label{equ:moving_sequence}
+\end{equation}
+where the direction of arrows show the moving direction, and the number of arrows represents the moving step. This sequence corresponds with the following sequence of gadget addresses:
+\begin{align}
+  \label{equ:gadget_addresses}
+  \begin{split}
+    \mathtt{0x80489e5}, \mathtt{0x8048a1d}, \mathtt{0x80489dd}, \mathtt{0x8048a1d}, \\
+  \mathtt{0x8048a0d}, \mathtt{0x80489e5}, \mathtt{0x8048a15}, \mathtt{0x8048a15}
+  \end{split}
+\end{align}
+The characters of the serial is computed directly from~\Cref{equ:gadget_address}, we then get the serial: 
+\begin{equation*}
+  \mathtt{.5-53.44}  
+\end{equation*}
+Executing the challenge with this serial, we observe a nice output which shows the moving process of the star to the question mark, and the string ``\texttt{Well done!}'' as shown in~\Cref{fig:good_serial}.
+
+\begin{listing}[ht]
+  \begin{minted}[frame=lines,tabsize=2]{bash}
+set -x SHOW_ME_THE_MECUNG sfsdf
+./mecung.elf .5-53.44
+#######
+# #   #
+#   # #
+##### #
+#*    #
+#######
+
+Well done!
+  \end{minted}
+  \caption{Good serial}
+  \label{fig:good_serial}
+\end{listing}
+
+\begin{remark}
+  The sequence~\ref{equ:moving_sequence} represents indeed the \emph{algorithm} of the ``abstract program'' while the sequence~\ref{equ:gadget_addresses} is the ``abstract program'' running on the abstract machine discussed in~\Cref{sec:execution_model}.
+\end{remark}
+
+\begin{listing}[h]
+  \begin{tcolorbox}
+\begin{minted}[tabsize=2]{c++}
+static auto buffer = reinterpret_cast<size_t*>(0x804a1e0);
+auto setup_rop_table (size_t* rop_table, char* serial) -> void
+{
+  auto rop_idx = rop_table;
+  auto rop_bound = rop_table + 18;
+  auto current_char = serial[0];
+
+  *rop_idx = 0x8048997;
+  rop_idx++;
+
+  *rop_idx = reinterpret_cast<size_t>(buffer);
+  rop_idx++;
+
+  while (true) {
+    if (*serial != 0) {
+      if (rop_idx < rop_bound) {
+        current_char = *serial;
+        serial++;
+
+        if (current_char <= '&' || current_char <= '~')
+          throw std::logic_error("bad format: invalid char in serial\n");
+
+        current_char -= 0x27; 
+        current_char <<= 3; // we can know the location of ROP functions
+
+        *rop_idx = 0x80489ad + current_char;
+        rop_idx++;
+
+        *rop_idx = 0x804899a;
+        rop_idx++;
+      }
+      else throw std::logic_error("bad format: serial is too long\n");
+    }
+    else {
+      *rop_idx = 0x80489a7;
+      *rop_idx = reinterpret_cast<size_t>(check_maze);
+      break;
+    }
+  }
+
+  return;
+}
+\end{minted}
+  \end{tcolorbox}
+  \caption{\texttt{setup\_rop\_table}}
+  \label{lst:setup_rop_table}
+\end{listing}
+
+\begin{listing}[ht]
+  \begin{tcolorbox}
+\begin{minted}[tabsize=2]{c++}
+auto update_cell_pos (int* current_pos, int steps, int direction) -> int
+{
+  // read maze's config
+  auto column = current_pos[0];
+  auto row = current_pos[1];
+
+  auto in_wall = 0;
+  auto step_idx = 0;
+
+  while ((in_wall == 0) && (step_idx < steps)) {
+    if (direction == 2) ++row;
+    else {
+      if (direction > 2) {
+        if (direction == 3) --column;
+        else if (direction == 4) ++column;
+      }
+      else if (direction == 1) --row;
+    }
+
+    if (maze[column + row * 8] == '#') in_wall = 1;
+
+    ++step_idx;
+  }
+
+  // update maze's config
+  current_pos[0] = column;
+  current_pos[1] = row;
+
+  return in_wall;
+}
+\end{minted}
+  \end{tcolorbox}
+  \caption{\texttt{update\_cell\_pos}}
+  \label{lst:update_cell_pos}
+\end{listing}
+
+\begin{listing}[ht]
+  \begin{tcolorbox}
+\begin{minted}[tabsize=2]{c++}
+auto check_maze () -> void
+{
+  auto column = 1, row = 1;
+
+  auto move_steps = 0, move_direction = 0, color = 0;
+  auto in_wall = 0; auto idx = 0;
+
+  auto good_config = false;
+
+  while (true) {
+    if (in_wall != 0 || idx > 7) {
+      if (column != 1 || row != 4) good_config = false;
+      else good_config = true;  // column == 1 && row == 4
+      break;
+    }
+    else {
+      // first byte (for number of steps)
+      move_steps = buffer[idx * 4] | 0xff;
+
+      // second byte (for direction)
+      move_direction = (buffer[idx + 4] >> 0x8) | 0xff;
+
+      // third byte (for color)
+      color = (buffer[idx + 4] >> 0x10) | 0xff;
+
+      in_wall = update_cell_position(&column, move_steps, move_direction);
+
+      idx++;
+    }
+  }
+
+  if (good_config) printf("\nWell done!\n"); // column == 1 && row == 4
+  else printf("\nOops, try again\n");
+
+  return;
+}
+\end{minted}
+  \end{tcolorbox}
+  \caption{\texttt{check\_maze}}
+  \label{lst:check_maze}
+\end{listing}
 
 \printbibliography
 
