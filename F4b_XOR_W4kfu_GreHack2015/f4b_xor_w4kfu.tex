@@ -31,6 +31,7 @@
 
 \texttt{F4b\_XOR\_W4kfu} is a 32 bits \texttt{PE} binary, it seems to be a very classic reverse engineering challenge at first sight, without any fancy GUI, it simply requests for an input from the standard input, then prints \texttt{Nop!} or \texttt{Yes!} depending on whether the input is correct or not. We can also notice that the challenge runs a little bit slow.
 
-\printbibliography
+But when analyzing it more carefully, we soon recognized that the binary is very sophisticated (this is the reason why it worths $500$ points). First, when deassembling the binary, most of its codes is encrypted: the visible instructions only disclosure that the program read a string from the standard input. Second, when tracing its execution, the obtained trace is extremely long: we do not know exactly there are how many instructions executed but we have to stop tracing when the number of traced instructions is about $5.000.000$ (so that explains why the program runs slowly).
+
 
 \end{document}
