@@ -9,7 +9,7 @@
 \begin{document}
 
 \title{Deobfuscating an ``onion obfuscated'' challenge}
-\titlerunning{F4b_XOR_F4kfu_Writeup}
+\titlerunning{F4b\_XOR\_F4kfu\_Writeup}
 
 \author{
   Thanh Dinh Ta\inst{1}
@@ -29,9 +29,14 @@
 \section{Introduction}
 \label{sec:introduction}
 
-\texttt{F4b\_XOR\_W4kfu} is a 32 bits \texttt{PE} binary, it seems to be a very classic reverse engineering challenge at first sight, without any fancy GUI, it simply requests for an input from the standard input, then prints \texttt{Nop!} or \texttt{Yes!} depending on whether the input is correct or not. We can also notice that the challenge runs a little bit slow.
+\texttt{F4b\_XOR\_W4kfu} is a 32 bits \texttt{PE} binary, it seems to be a very classic reverse engineering challenge at first sight. Without any fancy GUI, it simply requests for an input from the standard input, then prints \texttt{Nop!} or \texttt{Yes!} depending on whether the input is correct or not. A small notice is that the challenge runs a little bit slow.
 
-But when analyzing it more carefully, we soon recognized that the binary is very sophisticated (this is the reason why it worths $500$ points). First, when deassembling the binary, most of its codes is encrypted: the visible instructions only disclosure that the program read a string from the standard input. Second, when tracing its execution, the obtained trace is extremely long: we do not know exactly there are how many instructions executed but we have to stop tracing when the number of traced instructions is about $5.000.000$ (so that explains why the program runs slowly).
+When analyzing it more carefully, we soon recognized that the binary is very sophisticated (this is the reason why it worths $500$ points). First, when disassembling the binary, most of its codes is encrypted: the visible instructions only disclosure that the program read a string from the standard input. Second, when tracing its execution, the obtained trace is extremely long (that explains why the program runs slowly): we have to stop tracing when the number of traced instructions is about $5.000.000$, and this number is only a very small part of the full trace.
 
+We cannot find any ``easy point'' which helps to get some information about the correct password. The simple \emph{side-channel attack} based on execution traces does not work since the number of executed instructions is identical for each password verification session. The \emph{differential attack} which compares different execution traces is not scalable since the traces are so long: by \emph{dynamic tainting analysis}, we can observe in the partial execution trace some positions which access/modify the input password buffer, but we cannot figure out the password verifying algorithm since these positions are not closed together, they are instead spread along the trace, moreover the number of instructions between two consecutive positions is huge. Some effort using \emph{concolic execution} tools with \emph{SMT solvers} gives no result, a trace of millions instruction goes far beyond the capability of any state of the art automated tool.
 
+There is no space for ``low hanging fruit'' attack, being curious about how the binary works, we decided to deofuscate it and the result makes us surprise. The binary implements very interesting and novel obfuscation techniques: decrypt-execute-encrypt \emph{self-modifying code}, \emph{nested virtual machines} with a simulated \emph{multiple processes}\footnote{Based on the information from the correct password, we think that the authors of this challenge may call this model ``multiple threads''.} execution model, and a \emph{backdoored hash function}. To our best knowledge, deobfuscating these schemes of obfuscation is not studied yet: researches on code unpacking suppose that there exists always a \emph{transition point} from that instructions are not encrypted anymore, virtualization deobfuscation considers only \emph{single layer} virtual machines with simple \emph{switch based} model, and yet there is no research considering the situation where these techniques are combined.
+
+In this writeup, we present a semi-automatic approach to deobfuscate  \texttt{F4b\_XOR\_W4kfu}, existing binary code analysis/debugging tools (e.g.~IDA, WinGdb) are helpful but considered as referential tools only.
+% we instead introduce REVEN, a \emph{heavyweight dynamic analysis tool} for binary codes and several plugins of it.
 \end{document}
