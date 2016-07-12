@@ -1,27 +1,29 @@
 # Deobfuscating an _onion_ obfuscated challenge with REVEN
 
-  The binary `F4b_XOR_W4kfu` proposed in the CTF of Grehack 2015, it is the code reversing challenge of the highest point (500) over all categories (cryptography, exploit, reverse engineering, etc). We think that one of reason for which the challenge is worth this point is because it is heavily obfuscated, the obfuscation techniques implemented are novel and interesting.
+  The binary `F4b_XOR_W4kfu` proposed in the CTF of Grehack 2015, it is the code reversing challenge of the highest point over all categories (cryptography, exploit, reverse engineering, etc). We think one of the reasons for which the challenge is worth this point is because it is heavily obfuscated, the obfuscation techniques implemented are novel and interesting.
   
-  This is the first article of a series where we introduce our ongoing work in developing an automated deobfuscation system using the *symbolic execution* framework REVEN. Since our approach is *operational*, or literally speaking we still need some information about how the obfuscation techniques are implemented, in this article we present what we discovered in reversing `F4b_XOR_W4kfu`.
+  This is the first article of a series where we introduce our ongoing work in developing an automated deobfuscation system using the *symbolic execution* framework REVEN. Since our approach is *operational*[^fn1], namely we still need some information about how the obfuscation techniques are implemented, in this article we present what we discovered in reversing `F4b_XOR_W4kfu`.
   
 ## Introduction
   
-  `F4b_XOR_W4kfu.exe` is a $32$ bits PE binary, without any fancy GUI, it asks for a password from the standard input and then prints `Nop!` or `Yes!`. The mission is to find out the good flag (that makes the program print `Yes!`).
+  `F4b_XOR_W4kfu.exe` is a 32 bits PE binary, without any fancy GUI, it asks for a password from the standard input and then prints `Nop!` or `Yes!`. The mission is to find out the good password (one that makes the program print `Yes!`).
   
     ./F4b_XOR_W4kfu.exe 
     Welcome!
     Password? 1234aqzert
     Nop!⏎
   
-  The program uses several obfuscation techniques to prevent itself from being analyzed. Its execution traces are extremely long (the challenge sacrifices performance a lot for the obfuscation purpose) because of a *code decryption/re-encryption* mechanism and of a *nested multiprocess virtual machine* execution model. The "input related" instructions spread out (extremely long) traces, the password checking algorithm is "mostly" constant time.
+  The program uses several obfuscation techniques to prevent itself from being analyzed. First, its execution traces are extremely long (the challenge sacrifices performance a lot for the obfuscation purpose) because of a *code decryption/re-encryption* mechanism and of a *nested multiprocess virtual machine* execution model. Second, the "input related" instructions spread out (extremely long) traces, the password checking algorithm is "mostly" constant time.
   
-  Most instructions of the binary are encrypted, they are just decrypted before executing and are immediately reencrypted later (so we cannot "unpack" it using traditional approaches). These properties make difficult for direct dynamic/static analysis and for concolic execution. 
+  Last but not least, most instructions of the binary are encrypted, they are decrypted just before executing and are immediately reencrypted later (so we cannot "unpack" it using traditional approaches). These properties make difficult for direct dynamic/static analysis and for concolic execution.
+  
+  [^fn1]: As far as we know, all current binary code deobfuscation approaches are operational. As a direct result of Rice's theorem, learning general programs simply from *input/output* is a well-known undecidable problem. Even for much more restricted contexts, static analysis is proven to be NP-hard for smartly obfuscated programs[^ct1,^ct2]
 
 #### REVEN - a very short introduction
 
   REVEN Axion is a framework which does *system-level symbolic execution*,  enriched by code analysis plugins interacting with the core using Python or C/C++ API. One of the essential differences between REVEN and other symbolic execution engines is that it does symbolic execution for *all execution threads* presenting on the system, from ring $0$ to ring $3$. 
   
-  In a typical reversing engineering task, we start by creating a *scenario* which executes the "need to be examined binary" in a virtual machine; the result of the scenario will be used in further analysis. For example, in case of `F4b_XOR_W4kfu` we create a scenario which executes the binary with some input flag, the scenario terminates when the binary stop by printing output string `Nop!`.
+  In a basic reversing engineering task, we start by creating a *scenario* which executes the "need to be examined binary" in a virtual machine; the result of the scenario will be used in further analysis. For example, in case of `F4b_XOR_W4kfu` we create a scenario which executes the binary with some input flag, the scenario terminates when the binary stop by printing output string `Nop!`.
 
   ![Binary analysis with REVEN]
   (./reven_basic_gui.png)
@@ -30,7 +32,7 @@
 
   An advantage of REVEN is that it captures all executed instructions of the binary, so every "hidden" activities are disclosed clearly under REVEN. Since a scenario is system-wide, the executed instructions come from all executing threads on the system;  but in this case we are interested in instructions of the binary only, we select instructions executed by `F4b_XOR_W4kfu.exe`, the result is equivalent with the execution trace of the program.
   
-  The first thing we can observe is the binary starts executing from the instruction at the address `0x402000`, this is also the entry point of the program, we can check that using `objdump`:
+  The first thing we can observe is the binary starts executing from the instruction at the address `0x402000`, this is also the entry point of the program, we can check this fact using `objdump`:
   
     objdump -f F4b_XOR_W4kfu.exe 
     
