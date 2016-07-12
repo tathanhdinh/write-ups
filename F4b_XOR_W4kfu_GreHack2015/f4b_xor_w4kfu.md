@@ -13,7 +13,9 @@
     Password? 1234aqzert
     Nop!⏎
   
-  The program uses several obfuscation techniques to prevent itself from being analyzed. Its execution traces are extremely long (the challenge sacrifices performance a lot for the obfuscation purpose) because of a *code decryption/re-encryption* mechanism and of a *nested multiprocess virtual machine* execution model. The "input related" instructions spread out (extremely long) traces, the password checking algorithm is "mostly" constant time. Most instructions of the binary are encrypted, they are just decrypted before executing and are immediately reencrypted later (so we cannot "unpack" it using traditional approaches). These properties make difficult for direct dynamic/static analysis and for concolic execution. 
+  The program uses several obfuscation techniques to prevent itself from being analyzed. Its execution traces are extremely long (the challenge sacrifices performance a lot for the obfuscation purpose) because of a *code decryption/re-encryption* mechanism and of a *nested multiprocess virtual machine* execution model. The "input related" instructions spread out (extremely long) traces, the password checking algorithm is "mostly" constant time.
+  
+  Most instructions of the binary are encrypted, they are just decrypted before executing and are immediately reencrypted later (so we cannot "unpack" it using traditional approaches). These properties make difficult for direct dynamic/static analysis and for concolic execution. 
 
 #### REVEN - a very short introduction
 
