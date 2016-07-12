@@ -2,7 +2,7 @@
 
   The binary `F4b_XOR_W4kfu` proposed in the CTF of Grehack 2015, it is the code reversing challenge of the highest point over all categories (cryptography, exploit, reverse engineering, etc). We think one of the reasons for which the challenge is worth this point is because it is heavily obfuscated, the obfuscation techniques implemented are novel and interesting.
   
-  This is the first article of a series where we introduce our ongoing work in developing an automated deobfuscation system using the *symbolic execution* framework REVEN. Since our approach is *operational*[^fn1], namely we still need some information about how the obfuscation techniques are implemented, in this article we present what we discovered in reversing `F4b_XOR_W4kfu`.
+  This is the first article of a series where we introduce our ongoing work in developing an automated deobfuscation system using the *symbolic execution* framework REVEN. Since our approach is *operational*[^fn1], namely we still need some information about how the obfuscation techniques are implemented, this article presents what we have discovered in reversing `F4b_XOR_W4kfu`.
   
 ## Introduction
   
@@ -17,7 +17,7 @@
   
   Last but not least, most instructions of the binary are encrypted, they are decrypted just before executing and are immediately reencrypted later (so we cannot "unpack" it using traditional approaches). These properties make difficult for direct dynamic/static analysis and for concolic execution.
   
-  [^fn1]: As far as we know, all current binary code deobfuscation approaches are operational. As a direct result of [Rice's theorem](https://en.wikipedia.org/wiki/Rice%27s_theorem), learning general programs simply from *input/output relation* is a well-known undecidable problem. Even for much more restricted contexts, static analysis is [proven to be NP-hard](http://citeseerx.ist.psu.edu/viewdoc/summary?doi=10.1.1.35.2337) for [smartly obfuscated](https://www.cs.ucsb.edu/~chris/research/doc/acsac07_limits.pdf) programs. Some recent *semantics-based* [deobfuscation](http://static.usenix.org/event/woot09/tech/full_papers/rolles.pdf) [approaches](https://www.cs.arizona.edu/people/debray/Publications/ccs-unvirtualize.pdf) are operational, though some [is considered  generic](https://www.cs.arizona.edu/people/debray/Publications/generic-deobf.pdf), they still base on hypothesis about how programs are obfuscated. However, some classes of *loop-free* programs can be efficiently deobfuscated (i.e. [synthesized](http://people.eecs.berkeley.edu/~sseshia/pubdir/synth-icse10.pdf)) from input/output with helps of SMT solvers.
+  [^fn1]: As far as we know, most of current binary code deobfuscation approaches are operational. As a direct result of [Rice's theorem](https://en.wikipedia.org/wiki/Rice%27s_theorem), learning general programs simply from *input/output relation* is a well-known undecidable problem. Even for much more restricted contexts, static analysis is [proven to be NP-hard](http://citeseerx.ist.psu.edu/viewdoc/summary?doi=10.1.1.35.2337) for [smartly obfuscated](https://www.cs.ucsb.edu/~chris/research/doc/acsac07_limits.pdf) programs. Some recent *semantics-based* [deobfuscation](http://static.usenix.org/event/woot09/tech/full_papers/rolles.pdf) [approaches](https://www.cs.arizona.edu/people/debray/Publications/ccs-unvirtualize.pdf) are intrinsically operational, though some [is considered  generic](https://www.cs.arizona.edu/people/debray/Publications/generic-deobf.pdf), they base on many hypothesis about how programs are obfuscated. However, some special classes of *loop-free* programs can be efficiently [synthesized](http://people.eecs.berkeley.edu/~sseshia/pubdir/synth-icse10.pdf)) from input/output with helps of SMT solvers.
 
 #### REVEN - a very short introduction
 
@@ -41,7 +41,7 @@
       EXEC_P, D_PAGED
       adresse de départ 0x00402000
 
-  The behaviors of first several instructions disassembled by `objdump` can be easily interpreted by REVEN. For example, the instruction at `0x402008` is a call to `GetStdHandle`, one 
+  The behaviors of first several instructions disassembled by `objdump` can be easily interpreted by REVEN. For example, the instructions at `0x402008` and `0x402013` are calls to `GetStdHandle`, one at `0x40202c` calls `WriteFile`, and one at `0x402042` calls `ReadFile`, that indeed corresponds to the step of print the strings `Welcome!` and `Password? `, then reads from the standard input.
 
     objdump -d --start-address=0x402000 F4b_XOR_W4kfu.exe
     
@@ -85,4 +85,5 @@
       40205a:       f6 29                   imulb  (%ecx)
       ...
 
+### Code decryption/re-encryption
   
