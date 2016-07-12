@@ -17,7 +17,7 @@
   
   Last but not least, most instructions of the binary are encrypted, they are decrypted just before executing and are immediately reencrypted later (so we cannot "unpack" it using traditional approaches). These properties make difficult for direct dynamic/static analysis and for concolic execution.
   
-  [^fn1]: As far as we know, all current binary code deobfuscation approaches are operational. As a direct result of Rice's theorem, learning general programs simply from *input/output* is a well-known undecidable problem. Even for much more restricted contexts, static analysis is proven to be NP-hard for smartly obfuscated programs[^ct1,^ct2]
+  [^fn1]: As far as we know, all current binary code deobfuscation approaches are operational. As a direct result of Rice's theorem, learning general programs simply from *input/output* is a well-known undecidable problem. Even for much more restricted contexts, static analysis is [proven to be NP-hard](http://citeseerx.ist.psu.edu/viewdoc/summary?doi=10.1.1.35.2337) for [smartly obfuscated](https://www.cs.ucsb.edu/~chris/research/doc/acsac07_limits.pdf) programs.
 
 #### REVEN - a very short introduction
 
@@ -30,7 +30,7 @@
   
 ## Execution trace
 
-  An advantage of REVEN is that it captures all executed instructions of the binary, so every "hidden" activities are disclosed clearly under REVEN. Since a scenario is system-wide, the executed instructions come from all executing threads on the system;  but in this case we are interested in instructions of the binary only, we select instructions executed by `F4b_XOR_W4kfu.exe`, the result is equivalent with the execution trace of the program.
+  An advantage of REVEN is that it captures all executed instructions of the binary, it is virtually immune from anti-debugging tricks that may be applied, so every "hidden" activities are disclosed clearly under REVEN. Since a scenario is system-wide, the executed instructions come from all executing threads on the system;  but in this case we are interested in instructions of the binary only, we select instructions executed by `F4b_XOR_W4kfu.exe`, the result is equivalent with the execution trace of the program.
   
   The first thing we can observe is the binary starts executing from the instruction at the address `0x402000`, this is also the entry point of the program, we can check this fact using `objdump`:
   
