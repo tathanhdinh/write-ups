@@ -34,7 +34,7 @@
   
   The program uses several **obfuscation** techniques to prevent itself from being analyzed. *First*, its execution traces are extremely long taking consideration that the program is *just* a CTF challenge; to get some idea about how long are these trace, after receiving the input, there are 2.716.465.511 instructions executed until the first comparison of the password checking procedure. This is because of a [code decryption/re-encryption](https://www.cosic.esat.kuleuven.be/wissec2006/papers/3.pdf) mechanism and of a [nested multiprocess virtual machine](https://aspire-fp7.eu/spro/wp-content/uploads/SPRO2015_Workshop_Talk_V2.pdf) execution model.
   
-  *Second*, the "input related" instructions in a trace are not local, they instead spread out the long trace, that makes difficult to figure out how the input password is manipulated and checked; moreover the password checking algorithm is "mostly" constant time. *Last but not least*, most instructions of the binary are encrypted, they are decrypted just before executing and are immediately reencrypted later, so we cannot [unpack](http://s3.eurecom.fr/docs/oakland15_packing.pdf) it in the [classical sense](http://ftp.cs.wisc.edu/paradyn/papers/Roundy12Packers.pdf). 
+  *Second*, the "input related" instructions in a trace are not local, they instead spread out the long trace, that makes difficult to figure out how the input password is manipulated and checked; moreover the password checking algorithm is "mostly" constant time. *Last but not least*, most instructions of the binary are encrypted, they are decrypted just before executing and are immediately re-encrypted later, so we cannot [unpack](http://s3.eurecom.fr/docs/oakland15_packing.pdf) it in the [classical sense](http://ftp.cs.wisc.edu/paradyn/papers/Roundy12Packers.pdf). 
   
   These properties make difficult for direct dynamic/concolic/static analysis. Low-hanging fruit approaches, e.g. black-box attack on counting number of executed instructions, seems not feasible: there is volume of more than 2.7 billion instructions must be passed before reaching the first "input sensitive" comparison
   
@@ -46,14 +46,22 @@
   
   ![Synchronization between REVEN-Axion and IDA Pro](./reven_sync_idapro.png)
   
-  But this short easy reversing time has finished, from now, easy codes do not exist anymore :-)
+  But this short easy reversing time has finished, from now, easy codes do not exist anymore >:)
 
 ## Code decryption/re-encryption mechanism
 
-  Passing statically over simple instructions above, the first instruction which attracts our attention is at `0x402058`, Reven informs that there is an **execution after write** at this address: that means this instruction are overwritten before being executed. Indeed, the executed instruction is `xor eax, eax` as shown in Reven instead of the static disassembling result `js 0x40200d`.
+  Passing statically over simple instructions above, the next instructions seem "benign" :-), some `nop`(s), then a `call 0x40400`. However, Reven notices that there are lots of **execution after write** (i.e. some memory addresses are written before getting executed). Some of them are redundant alerts since the process mapping mechanism of `ntoskrnl.exe`, but the first one which really attracts our attention is at `0x402058`: the really executed instruction is `xor eax, eax`, instead of `js 0x40200d` from the static disassembling result.
   
   ![Execution after write](./reven_exec_after_write.png)
   
-  From static view given by IDA, we know that something following the `call 0x40400` has modified the instruction at `0x402058`. Reven helps us go further, by backward [dynamic tainting analysis](http://bitblaze.cs.berkeley.edu/papers/taintcheck-full.pdf), it shows that
+  *Different form DBI tools and debuggers which work at process level, Reven works at system level, it can trace the [flow of creating a process](https://download.microsoft.com/download/1/4/0/14045A9E-C978-47D1-954B-92B9FD877995/97807356648739_SampleChapters.pdf) (i.e. before the program gets run), here many instructions of the binary are mapped (i.e. written) into the memory using some functions (e.g. `MiCopyOnWrite`) inside `ntoskrnl.exe`, then executed when the program gets run. Consequently, these instructions are redundantly marked as "execution after write".*
+  
+  From static view in IDA, we can conclude that something following `call 0x40400` has modified the instruction at `0x402058`. We have more detail information with Reven, by backward [dynamic tainting analysis](http://bitblaze.cs.berkeley.edu/papers/taintcheck-full.pdf), it shows a chain of `read/write/execute` on this address, the nearest instruction which writes on the address is at `0x4042fa`, that is `stosb`.
+  
+  ![Writting instruction](./reven_overwritting_ins.png)
   
 ### First virtualization layer
+  
+  We now know that the binary will modify some instructions before executing them, and this can be revealed by statically analysis the instructions following `call 0x40400`. To get an intuition about what is going on, we extract the *control-flow graph* from the trace of Reven; the following graph is constructed from a trace of 10.000.000 instructions starting from `0x402048`.
+  
+  ![Partial control flow graph]()
