@@ -42,7 +42,7 @@
   
   The binary has 4 sections, all are marked as executable, writable and executable, how evil it is :-); the section `.frisk0` is simply an ID of all GreHack's binaries, so we are not surprise. The binary starts from `0x402000` which is also the entry point, no TLS callback trick is applied, as confirmed by both Reven and IDA.
   
-  Several first instructions are not interesting, for example, the instructions at `0x402008` and `0x402013` are calls to `GetStdHandle`, one at `0x40202c` calls `WriteFile`, and one at `0x402042` calls `ReadFile`. They simply print the strings `Welcome!` and `Password?`, then reads password from the standard input.
+  Several first instructions are not interesting, for example, ones at `0x402008` and `0x402013` are calls to `GetStdHandle`, there is also a call `WriteFile` at `0x40202c`, and a call `ReadFile` at `0x402042`. They simply print the strings `Welcome!` and `Password?`, then reads password from the standard input.
   
   ![Synchronization between REVEN-Axion and IDA Pro](./reven_sync_idapro.png)
   
@@ -65,7 +65,7 @@
   We now know that the binary will modify some instructions before executing them, and this can be revealed by statically analysis the instructions following `call 0x40400`. To get an intuition about what is going on, we extract a partial *control flow graph* from the trace of Reven; the following graph is constructed from a trace of 10.000.000 instructions starting from `0x402048`.
   
   ![Partial control flow graph](./F4b_cfg_n.png)
-  (this is a high-resolution image, one may click to it to observe the details)
+  (this is a high-resolution image, click on it to observe the details)
 
   *The control flow graph given by Reven is partial since it is constructed based on the dynamic trace computed from running program with a concrete input, but it gives at least some information about which kind of code that we deal with.*
   
@@ -77,10 +77,16 @@
   
   ![Instruction counting](./ins_count_histo.png)
 
-  Our intuition is now that there is VM whose entry point starts with `0x404000`, and single dispatch point ends at `0x4042e0`, recovering the original control flow is just a trivial task. But we do not understand how it works yet :-).
+  Our intuition is now that there is VM whose entry point starts with `0x404000`, and single dispatch point ends at `0x4042e0`, recovering the original control flow is just a trivial task. But we do not understand how it works yet.
   
   *The similar form of control flow graph can be observed in binaries obfuscated by [VMProtect](http://vmpsoft.com/), but we cannot observe this form in binaries obfuscated by [Code Virtualizer](http://oreans.com/codevirtualizer.php) since this obfuscator uses [threaded code](http://home.claranet.nl/users/mhx/ForthBell.pdf) instead of switch-based dispatcher, the control flow to the next opcode's basic block will be calculated at the end of the current opcode's basic block. In some other VM obfuscated binaries, e.g. [HyperUnpackMe2](http://crackmes.de/users/thehyper/hyperunpackme2/), its dispatcher has even several dispatch points, the [detail analysis](http://www.openrce.org/articles/fullview/28) of this has given by Rolf Rolles.*
   
-#### Internal detail of the first virtual machine
+#### Reversing the first virtual machine
 
-  The results obtained above gives us a "hint" about the kind of obfuscation, to understand in details how it works, we need careful analysis its dispatcher, whose the entry point is at `0x404000`. The first part of it, can be observed easily from IDA Pro or Reven, has the following control flow graph.
+  The results obtained above gives us a "hint" about the kind of obfuscation, to understand in details how it works, we need careful analysis its dispatcher, whose the entry point is at `0x404000`. The first part of the dispatcher has the following control flow graph.
+
+  ![First part of the dispatcher](./reven_first_part_dispatcher.png)
+
+  First, as can be seen on the "global" CFG above, we note that the `ret` instruction at the end will transfer the control flow to different basic blocks, but the continued instructions are not instructions following `call 0x404000`, in other words, the called function does not return to where it is called; the returned address must be modified somewhere in this function. Indeed, the returned instruction is overwritten by `mov [esp + 0x14], eax` at `0x404045`, this technique of using `ret` to modify the control flow is well known as [return oriented programming](https://en.wikipedia.org/wiki/Return-oriented_programming). We also notice from instructions at `0x404005` and `0x404009` that the original returned address is saved to the memory at `0x404056`.
+  
+  Second, there are two `call`(s) at `0x404016` and `0x404022`, the called functions are "standard" (i.e. they return to where they are called), simple but important.
