@@ -79,7 +79,7 @@
 
   Our intuition is now that there is VM whose entry point starts with `0x404000`, and single dispatch point ends at `0x4042e0`, recovering the original control flow is just a trivial task. But we do not understand how it works yet.
   
-  *The form of control flow graph can be observed also in binaries obfuscated by [VMProtect](http://vmpsoft.com/), but we cannot observe this form in binaries obfuscated by [Code Virtualizer](http://oreans.com/codevirtualizer.php) since this obfuscator uses [threaded code](http://home.claranet.nl/users/mhx/ForthBell.pdf) instead of switch-based dispatcher: the control flow to the next opcode's basic block will be calculated at the end of the current opcode's basic block. In some other VM obfuscated binaries, e.g. [HyperUnpackMe2](http://crackmes.de/users/thehyper/hyperunpackme2/), its dispatcher has even several dispatch points, the [detail analysis](http://www.openrce.org/articles/fullview/28) of this has given by Rolf Rolles.*
+  *The form of control flow graph can be observed also in binaries obfuscated by [VMProtect](http://vmpsoft.com/), but we cannot observe this form in binaries obfuscated by [Code Virtualizer](http://oreans.com/codevirtualizer.php) since this obfuscator uses [threaded code](http://home.claranet.nl/users/mhx/ForthBell.pdf) instead of switch-based dispatcher: the control flow to the next opcode's basic block will be calculated at the end of the current opcode's basic block. In some VM obfuscated binaries, e.g. [HyperUnpackMe2](http://crackmes.de/users/thehyper/hyperunpackme2/), the dispatcher has even multiple dispatch points (a very nice detail analysis of this binary using IDA can be referenced [here](http://www.openrce.org/articles/fullview/28).
   
 #### Reversing the first virtual machine
 
@@ -92,10 +92,14 @@
   
   From instructions at `0x404005` and `0x404009`, we first notice that the original return address is saved to the memory at `0x404056`, then the return address is overwritten by `mov [esp + 0x14], eax` at `0x404045`; this new address is computed from a loop between `0x404030` and `0x40403b`.
   
-  *The code above uses `ret` to divert the control flow, the new return address is calculated dynamically. This technique is well known as [return oriented programming](https://en.wikipedia.org/wiki/Return-oriented_programming)*
+  *The dispatcher uses `ret` to divert the control flow, the new return address is calculated dynamically. This technique is well known as [return oriented programming](https://en.wikipedia.org/wiki/Return-oriented_programming)*
   
-  The semantics of the loop is quite simple, starting from a table at address `0x404309`, it looks for an entry in this table whose the `return address` is also the current return address, when the entry is found,  the `transition address` of the entry is used as the new return address.
+  The semantics of the loop is simple, it uses `ebx` which is the current return address (c.f. `pop` at `0x40402a` as well as `push` at `0x40400f`) to looks for an entry in a table at address `0x404309`, so that the `return address` is also the current return address, when the entry is found,  the `transition address` of the entry is used as the new return address. The structure of entries in this table is shown below.
   
   ![Rop table](./reven_rop_table.png)
   
-  Second, there are two `call`(s) at `0x404016` and `0x404022`, the called functions are "standard" (i.e. they return to where they are called), simple but important.
+  The position of the next examined entry is calculated from the position of the current entry and its length. So once we know the address of this table (which is `0x404309`), it can be completely parsed.
+  
+#### Gadget bound computation and re-encryption
+
+  We now notice to `call`(s) at `0x404016` and `0x404022`, the called functions are "standard" (i.e. they return to where they are called), simple but important: they are strongly correlated. The first one, starts at 
