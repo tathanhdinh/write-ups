@@ -87,6 +87,15 @@
 
   ![First part of the dispatcher](./reven_first_part_dispatcher.png)
 
-  First, as can be seen previously on the "global" CFG, we know that the `ret` instruction at the end will transfer the control flow to different basic blocks, but the continued instructions are not the ones following `call 0x404000`!!! In other words, the called function does not return to where it is called, the returned address must be modified somewhere. Indeed, the returned instruction is overwritten by `mov [esp + 0x14], eax` at `0x404045`, this technique of using `ret` to modify the control flow is well known as [return oriented programming](https://en.wikipedia.org/wiki/Return-oriented_programming). We also notice from instructions at `0x404005` and `0x404009` that the original returned address is saved to the memory at `0x404056`.
+#### ROP table
+  As can be seen previously in the "global" CFG, the `ret` instruction at `0x40404e` will transfer the control flow to different basic blocks, but the continued instructions are not the ones following `call 0x404000`!!! In other words, the called function does not return to where it is called, the returned address must be modified somewhere. 
+  
+  From instructions at `0x404005` and `0x404009`, we first notice that the original return address is saved to the memory at `0x404056`, then the return address is overwritten by `mov [esp + 0x14], eax` at `0x404045`; this new address is computed from a loop between `0x404030` and `0x40403b`.
+  
+  *The code above uses `ret` to divert the control flow, the new return address is calculated dynamically. This technique is well known as [return oriented programming](https://en.wikipedia.org/wiki/Return-oriented_programming)*
+  
+  The semantics of the loop is quite simple, starting from a table at address `0x404309`, it looks for an entry in this table whose the `return address` is also the current return address, when the entry is found,  the `transition address` of the entry is used as the new return address.
+  
+  ![Rop table](./reven_rop_table.png)
   
   Second, there are two `call`(s) at `0x404016` and `0x404022`, the called functions are "standard" (i.e. they return to where they are called), simple but important.
