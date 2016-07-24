@@ -87,14 +87,12 @@
   
   ![Instruction counting](./reven_ins_count_histo.svg)
 
-  Our intuition is now that there is VM whose entry point starts with `0x404000`, and single dispatch point ends at `0x4042e0`, recovering the original control flow is just a trivial task. But we do not understand how it works yet.
-  
   **Remark:** 
-  *The form of control flow graph can be observed also in binaries obfuscated by [VMProtect](http://vmpsoft.com/), but we cannot observe this form in binaries obfuscated by [Code Virtualizer](http://oreans.com/codevirtualizer.php) since this obfuscator uses [threaded code](http://home.claranet.nl/users/mhx/ForthBell.pdf) instead of switch-based dispatcher: the control flow to the next opcode's basic block will be calculated at the end of the current opcode's basic block. In some VM obfuscated binaries, e.g. [HyperUnpackMe2](http://crackmes.de/users/thehyper/hyperunpackme2/), the dispatcher has even multiple dispatch points (a very nice writeup of this binary using IDA can be referenced [here](http://www.openrce.org/articles/fullview/28)).*
+  *Such a form of control flow graph can be observed also in binaries obfuscated by [VMProtect](http://vmpsoft.com/), but we cannot observe this form in binaries obfuscated by recent versions of [Code Virtualizer](http://oreans.com/codevirtualizer.php), this obfuscator uses [threaded code](http://home.claranet.nl/users/mhx/ForthBell.pdf) instead of switch-based dispatcher: the control flow to the next opcode's basic block will be calculated at the end of the current opcode's basic block. In some VM obfuscated binaries, e.g. [HyperUnpackMe2](http://crackmes.de/users/thehyper/hyperunpackme2/), the dispatcher has even multiple dispatch points (there was a very nice [writeup](http://www.openrce.org/articles/fullview/28) of this binary using IDA).*
   
-#### Reversing the first virtual machine
+### Reversing the first virtual machine
 
-  The results obtained above gives us a "hint" about the kind of obfuscation, to understand in details how it works, we need careful analysis its dispatcher, whose the entry point is at `0x404000`. The first part of the dispatcher has the following control flow graph.
+  Our intuition is now that there is VM whose entry point starts with `0x404000`, and single dispatch point ends at `0x4042e0`. To understand in details how it works, we now careful examine its dispatcher, whose the entry point is at `0x404000`. The first part of the dispatcher has the following control flow graph.
 
   ![First part of the dispatcher](./reven_first_part_dispatcher.svg)
 
@@ -108,10 +106,19 @@
   
   The semantics of the loop is simple: it consumes `ebx` which is the current return address (c.f. `pop` at `0x40402a` as well as `push` at `0x40400f`), and a list at address `0x404309`. It  looks for an entry in the list so that its `return address` is equal to the current return address. When the entry is found, the new return address is updated by the `transition code` of the entry. The structure of this list is shown below.
   
-  ![Rop table](./reven_rop_table.png)
+  ![Rop table](./reven_rop_table.svg)
   
   Entries in this list are consecutive: *the position of the next entry is calculated by adding the position of the current entry with its length*. So once we know the starting address, which is `0x404309`, all entries can be completely located.
   
 #### Gadget's address computation and re-encryption
 
-  We now notice to call instructions at `0x404016` and `0x404022`, the called functions are "standard", i.e. they return back to where they are called. These functions are strongly correlated, their semantics is simple but important. The first one consumes a `dword` at `0x404052` (through `ebx`), a table of `dword`(s) at `0x40406d`; and return the first two consecutive `dword`(s) of this table (through `ecx` and `edx`) satisfying `ecx <= ebx <= edx`
+  We now notice to call instructions at `0x404016` and `0x404022`, the called functions are "standard", i.e. they return back to where they are called. These functions are strongly correlated, their semantics is simple but important.
+  
+  * **Gadget address interval:** the first one consumes a `dword` at `0x404052` (through `ebx`), a table of `dword`(s) at `0x40406d`; and return the first pair of two consecutive `dword`(s) of this table (through `ecx` and `edx`) satisfying `ecx <= ebx <= edx`. The following piece of code shows the algorithm.
+  
+        // inTable is the array of dword(s) from 0x404052 to 0x40424d
+        let calculateGadgetInterval inEbx inTable =
+          let loBounds, hiBounds = List.foldBack (fun addr (los, his) -> addr :: his, los) inTable ([], [])
+          List.find (fun (lo, hi) -> (lo <= inEbx && inEbx <= hi)) <| List.zip loBounds hiBounds
+
+  * **Gadget re-encryption:** the second function consumes the output of the first one as an interval of addresses and the string `IsThisTheFlag?` (no, we know it is not the flag :-)), it simply `xor` this interval with this string using [ECB mode](https://en.wikipedia.org/wiki/Block_cipher_mode_of_operation).
