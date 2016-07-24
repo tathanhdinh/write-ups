@@ -141,8 +141,22 @@
   * a new return address is calculated from the original one and a table of consecutive entries, 
   * the address of the entry containing the new address is backed up in the memory at `0x40405a`
   
-### Transition instructions
+### Transition code
   
-  Since the effect of the return address modification, the control flow is transferred to the transition instructions located at the new return address
+  Since the effect of the return address modification, the control flow is transferred to the transition instructions located at the new return address. We have introduced above the structure of the list of entries used to calculate the new return addresses. The new return addresses, i.e. locations of transition code, can be extracted easily now.
+  
+    0x404313; 0x404322; 0x404331; 0x404344; 0x404353; 0x404362; 0x404371; 0x404380; 0x40438f; 0x4043a4; 
+    0x4043b3; 0x4043c2; 0x4043d1; 0x4043e3; 0x4043f2; 0x404401; 0x404410; 0x40441f; 0x40442e; 0x40443d; 
+    0x40444f; 0x40445e; 0x40446d; 0x40447c; 0x40448b; 0x40449a; 0x4044a9; 0x4044b8; 0x4044c7; 0x4044d6; 
+    0x4044eb; 0x4044fa; 0x404509; 0x404518; 0x404527; 0x404536; 0x404545; 0x404554; 0x404563; 0x404579; 
+    0x404588; 0x404597; 0x4045a6; 0x4045b5; 0x4045c4; 0x4045d6; 0x4045e5; 0x4045f4; 0x404603; 0x404612; 
+    0x404621; 0x404630; 0x40463f; 0x40464e; 0x40465d; 0x40466c; 0x40467b; 0x40468a; 0x404699; 0x4046a8
+    
+  We can also check these addresses on the "global" control flow graph, all of them terminates with the instruction `jmp 0x40428c` which transfers the control flow to the second phase of the dispatcher.
+  
+### Second phase
+  
+  The second phase starts from the address `0x40428c`
+    
   
   
