@@ -37,7 +37,7 @@
 
   *Second*, the "input related" instructions in a trace are not local, they instead spread out the long trace, that makes difficult to figure out how the input password is manipulated and checked; moreover the password checking algorithm is "mostly" constant time.
 
-  *Last but not least*, most instructions of the binary are encrypted, they are decrypted just before executing and are immediately re-encrypted later, so we cannot [unpack](https://www.cs.arizona.edu/people/debray/Publications/static-unpacking.pdf) it in the [classical sense](http://ftp.cs.wisc.edu/paradyn/papers/Roundy12Packers.pdf), even the [fixed-point semantics](https://www.cs.arizona.edu/people/debray/Publications/metamorphic.pdf) for [code-waves model](https://hal.inria.fr/hal-01257908/file/codisasm.pdf) does not work. Some authors classify such technique of code packing into [type VI](http://s3.eurecom.fr/docs/oakland15_packing.pdf), the most sophisticated class of binary code packers.
+  *Last but not least*, most instructions of the binary are encrypted, they are decrypted just before executing and are immediately encrypted later, so we cannot [unpack](https://www.cs.arizona.edu/people/debray/Publications/static-unpacking.pdf) it in the [classical sense](http://ftp.cs.wisc.edu/paradyn/papers/Roundy12Packers.pdf). The code [formal approximation](https://en.wikipedia.org/wiki/Abstract_interpretation) using [phase semantics](https://www.cs.arizona.edu/people/debray/Publications/metamorphic.pdf) works but its result is trivial: the fixed point is too coarse to analyze on. More relaxed approaches based on code [phases](https://www.semanticscholar.org/paper/Reverse-Engineering-Self-Modifying-Code-Unpacker-Debray-Patel/01e90e360114da419a98591c2b58ec54154d6a0b/pdf) or [waves](https://hal.inria.fr/hal-01257908/file/codisasm.pdf) cannot apply since they require that the code must be "stable" at some execution point. Recently, some authors classify such technique of code packing into [type VI](http://s3.eurecom.fr/docs/oakland15_packing.pdf), the most sophisticated class of binary code packers.
 
   These properties make difficult for direct dynamic/concolic/static analysis, this binary is a good counterexample which invalidates hypothesis in current automated code deobfuscation approaches. Low-hanging fruit approaches, e.g. black-box attack on counting number of executed instructions, seems not feasible: there is volume of more than 2.7 billion instructions must be passed before reaching the first "input sensitive" comparison
 
@@ -114,11 +114,11 @@
   **Return address modification:** 
   looking into instructions at `0x404005` and `0x404009`, we observe that the original return address is saved to the memory at `0x404056`, then the return address is overwritten by the instruction `mov [esp + 0x14], eax` at `0x404045`. This new address is computed from a loop between `0x404030` and `0x40403b`.
 
-  The semantics of the loop is simple: it consumes `ebx` which is the current return address (c.f. `pop` at `0x40402a` as well as `push` at `0x40400f`), and a list at address `0x404309`. It  looks for an entry in the list so that its `return address` is equal to the current return address. When the entry is found, the new return address is updated by the `transition code` of the entry. The structure of this list is shown below.
+  The semantics of the loop is simple: it consumes `ebx` which is the current return address (c.f. `pop` at `0x40402a` as well as `push` at `0x40400f`), and a list at address `0x404309`. It  looks for an entry in the list so that its `return address` is equal to the current return address. When the entry is found, the new return address is updated by the `transition code` of the entry. The structure of this table is shown below.
 
-  ![Rop table](./reven_rop_table.svg)
+  ![Return address table](./reven_rop_table.svg)
 
-  Entries in this list are consecutive: *the location of the next entry is calculated by adding the current entry with its length*. So once we know the starting address, which is `0x404309`, all entries can be completely located. The following function calculates the new return address from the current one.
+  Entries in this table are consecutive: *the location of the next entry is calculated by adding the current entry with its length*. So once we know the starting address, which is `0x404309`, all entries can be completely located. The following function calculates the new return address from the current one.
 
     // retTable is the array of byte(s) from 0x404309
     let calculateNewReturnAddress (retAddr:uint32) (retTable:byte[]) =
@@ -140,7 +140,7 @@
       let loBounds, hiBounds = List.foldBack (fun addr (los, his) -> addr :: his, los) inTable ([], [])
       List.find (fun (lo, hi) -> (lo <= inEbx && inEbx <= hi)) <| List.zip loBounds hiBounds
 
-  **Code gadget encryption:** the second consumes the output of the first one as an interval of addresses and the string `IsThisTheFlag?` (no, we have tried, and it is not the flag :P), it simply `xor` this interval with this string using [ECB mode](https://en.wikipedia.org/wiki/Block_cipher_mode_of_operation).
+  **Code interval encryption:** the second consumes the output of the first one as an interval of addresses and the string `IsThisTheFlag?` (no, we have tried, and it is not the flag :P), it simply `xor` this interval with this string using [ECB mode](https://en.wikipedia.org/wiki/Block_cipher_mode_of_operation).
 
 #### Summary
 
@@ -148,9 +148,9 @@ So in the first phase, which starts by `pushfd` at `0x40400` and terminates by `
 
 * the original return address is backed up in the memory at `0x404056`,
 * an interval of addresses is calculated from a `dword` stored in the memory `0x404052`, then
-* the interval is `xor`ed with the string `IsThisTheFlag?`.
+* the interval is `xor`ed with the string `IsThisTheFlag?`,
 * a new return address is calculated from the original one and a table of consecutive entries, 
-* the address of the entry containing the new address is backed up in the memory at `0x40405a`
+* the address of the entry containing the new address is backed up in the memory at `0x40405a`.
 
 ### Transition code
 
@@ -173,7 +173,7 @@ So in the first phase, which starts by `pushfd` at `0x40400` and terminates by `
  
 #### Return address modification
 
-  The second phase uses some similar tricks as the first one. The last instruction `ret` diverts also the control flow to different addresses (of basic blocks for different opcodes), this is the effect of the instruction at `0x404208c` (which reverses a space for the return address), and one at `0x4042c2` (which fills the return address).
+  The second phase uses some similar tricks as the first one. The last instruction `ret` diverts also the control flow to different addresses, this is the effect of the instruction at `0x404208c` (which reverses a space for the return address), and one at `0x4042c2` (which fills the return address). From the global control flow graph, each return address commence a basic block corresponding with an opcode of the first virtual machine, we call such a basic block a [code gadget](https://en.wikipedia.org/wiki/Return-oriented_programming).
   
 #### Inter-phase encryption/decryption relation
 
@@ -190,8 +190,37 @@ So in the first phase, which starts by `pushfd` at `0x40400` and terminates by `
   so the pair of functions called in each phase consumes *the same value* to calculate an interval of address, then `xor` this interval with the string `IsThisTheFlag?`. The second phase then forwards the control flow to this `xor`ed code interval (which represents a code gadget). But `xor`ing with the same string will restore the original data, we now understand the opcode encryption/decryption mechanism of the dispatcher: *the first phase encrypts the last executed code gadget, the second one decrypts the gadget to be executed next*, this is an evil trick :-S.
   
   **Remark:**
-  *One may wonder that the conclusion above may be not correct if some opcodes can interfere in the code encryption/decryption, but we are pretty sure that this case does not happen: running several scenarios with different inputs, Reven confirms that this happens only in the dispatcher.*
+  *One may wonder that the conclusion above may be not correct if some opcodes can interfere in the code encryption/decryption, but we are pretty sure that this case does not happen: running several scenarios with different inputs, Reven confirms that code encryption/decryption happens only in the dispatcher.*
   
-#### Next executed opcode address calculation
+#### Next executed gadget address calculation
   
-  The return address of the second phase determines the address of the next executed gadget. It comes either from `0x404056` or `[ecx+0x6]` where `ecx` gets value from `0x40405a` (c.f. the instruction at `0x404293`). In the first phase, the `dword` at `0x404056` has been used to store the *original return address* (c.f. the instruction at `0x404009`), whereas `0x40405a` has been used to store the address of an entry in the `return address table` - this entry's address is calculated, again, from the *original return address*.
+  The return address of the second phase determines the address of the next executed gadget. It comes either from `0x404056` or `[ecx+0x6]` where `ecx` gets value from `0x40405a` (c.f. the instruction at `0x404293`). In the first phase, the `dword` at `0x404056` has been used to store the *original return address* (c.f. the instruction at `0x404009`), whereas `0x40405a` has been used to store the address of an entry in the return address table - this entry's address is calculated, again, from the *original return address*.
+  
+  **Return address table in detail:**
+  the instructions at `0x404293`, `0x404299` and `0x40429d` reveal how an entry of the return address table is parsed in the second phase. There are a 1 byte field at the offset 5 which will be used later to compute the flag `ZF` (c.f. the instruction at `0x4042b4`), and a `dword` field at the offset 6 which will be used as a candidate for the next gadget address.
+  
+  From analysis in the first phase, we have known that each entry consists of 10 bytes and the transition code, the first part of 10 byte consists of a `dword` for the `return address`, and 1 byte for the entry length. The analysis above discloses the next part of this 10 byte. The detail structure of the return address table is shown below.
+  
+  ![Return address table in detail](./reven_rop_table_detail.svg)
+  
+  **Opaque predicate:**
+  there is a conditional jump at `0x4042a1` but Reven detects that the condition [never takes](https://en.wikipedia.org/wiki/Opaque_predicate), that means `edx`, which is the `flag` value of an entry, is never equal to 0. Indeed, we can easily extract the `flag` values of all entries in this table, they are:
+  
+    19; 29; 19; 19; 29; 19; 28; 19; 29; 19; 19; 19; 29; 19; 19; 29; 19; 19; 29; 28; 19; 29; 19; 19; 
+    29; 29; 29; 29; 28; 29; 19; 19; 28; 19; 29; 29; 29; 28; 28; 29; 29; 29; 16; 28; 29; 19; 29; 19; 
+    29; 19; 19; 19; 29; 28; 19; 19; 19; 29; 29; 17
+    
+  **Flag extraction:**
+  the address of the next gadget depends on whether the condition jump at `0x4042b4` takes or not. The condition depends on the comparison between `al` and `dl` which are loaded/manipulated from flag registers (c.f the instruction at `0x404292`) and from the `flag` field of the current entry. Basically, `flag / 2` is used to shift right `eax` (which contains now flag registers), the last bit of `eax` (i.e the corresponding flag register) will be compare to `flag % 2`.
+  
+  The value of a `flag`, as extracted above, is either 16, 17, 19, 28 or 29; the value `flag / 2` is then either 8, 9 or 14. From the semantics of `lahf`, the flag registers are loaded into `eax` as:
+
+  ![Flag registers loading](./lahf.svg)
+
+  So we have the following table which represents the flag register used and `flag % 2`(i.e. the value which the flag register is compared with), for each value of `flag`
+
+    flag | flag / 2 | flag % 2 | compare with
+    ------------------------------------------
+    16   | 8        | 0        | CF
+    17   | 8        | 1        | CF
+    

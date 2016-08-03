@@ -17,25 +17,25 @@
 <text text-anchor="start" x="99" y="-526.4" font-family="Source Code Pro" font-size="12.00">0x40428f &#160;push ebx</text>
 <text text-anchor="start" x="99" y="-513.4" font-family="Source Code Pro" font-size="12.00">0x404290 &#160;push ecx</text>
 <text text-anchor="start" x="99" y="-500.4" font-family="Source Code Pro" font-size="12.00">0x404291 &#160;push edx</text>
-<text text-anchor="start" x="99" y="-487.4" font-family="Source Code Pro" font-size="12.00">0x404292 &#160;lahf </text>
+<text text-anchor="start" x="99" y="-487.4" font-family="Source Code Pro" font-size="12.00" fill="cornflowerblue">0x404292 &#160;lahf</text>
 <text text-anchor="start" x="99" y="-474.4" font-family="Source Code Pro" font-size="12.00">0x404293 &#160;mov ecx, dword ptr [0x40405a]</text>
 <text text-anchor="start" x="99" y="-461.4" font-family="Source Code Pro" font-size="12.00">0x404299 &#160;movzx edx, byte ptr [ecx+0x5]</text>
-<text text-anchor="start" x="99" y="-448.4" font-family="Source Code Pro" font-size="12.00">0x40429d &#160;mov ebx, dword ptr [ecx+0x6]</text>
+<text text-anchor="start" x="99" y="-448.4" font-family="Source Code Pro" font-size="12.00" fill="purple">0x40429d &#160;mov ebx, dword ptr [ecx+0x6]</text>
 <text text-anchor="start" x="99" y="-435.4" font-family="Source Code Pro" font-size="12.00">0x4042a0 &#160;push eax</text>
 <text text-anchor="start" x="99" y="-422.4" font-family="Source Code Pro" font-size="12.00">0x4042a1 &#160;cmp edx, 0x0</text>
 <text text-anchor="start" x="99" y="-409.4" font-family="Source Code Pro" font-size="12.00">0x4042a4 &#160;jz 0x4042bc</text>
 <text text-anchor="start" x="99" y="-396.4" font-family="Source Code Pro" font-size="12.00">0x4042a6 &#160;mov ecx, edx</text>
 <text text-anchor="start" x="99" y="-383.4" font-family="Source Code Pro" font-size="12.00">0x4042a8 &#160;shr ecx, 0x1</text>
 <text text-anchor="start" x="99" y="-370.4" font-family="Source Code Pro" font-size="12.00">0x4042aa &#160;and edx, 0x1</text>
-<text text-anchor="start" x="99" y="-357.4" font-family="Source Code Pro" font-size="12.00">0x4042ad &#160;shr eax, cl</text>
-<text text-anchor="start" x="99" y="-344.4" font-family="Source Code Pro" font-size="12.00">0x4042af &#160;and eax, 0x1</text>
+<text text-anchor="start" x="99" y="-357.4" font-family="Source Code Pro" font-size="12.00" fill="cornflowerblue">0x4042ad &#160;shr eax, cl</text>
+<text text-anchor="start" x="99" y="-344.4" font-family="Source Code Pro" font-size="12.00" fill="cornflowerblue">0x4042af &#160;and eax, 0x1</text>
 <text text-anchor="start" x="99" y="-331.4" font-family="Source Code Pro" font-size="12.00">0x4042b2 &#160;cmp al, dl</text>
 <text text-anchor="start" x="99" y="-318.4" font-family="Source Code Pro" font-size="12.00">0x4042b4 &#160;jz 0x4042bc</text>
 </g>
 <!-- 1 -->
 <g id="node2" class="node"><title>1</title>
 <path fill="none" stroke="black" d="M297,-275C297,-275 12,-275 12,-275 6,-275 0,-269 0,-263 0,-263 0,-251 0,-251 0,-245 6,-239 12,-239 12,-239 297,-239 297,-239 303,-239 309,-245 309,-251 309,-251 309,-263 309,-263 309,-269 303,-275 297,-275"/>
-<text text-anchor="start" x="8" y="-253.9" font-family="Source Code Pro" font-size="12.00">0x4042b6 &#160;mov ebx, dword ptr [0x404056]</text>
+<text text-anchor="start" x="8" y="-253.9" font-family="Source Code Pro" font-size="12.00" fill="purple">0x4042b6 &#160;mov ebx, dword ptr [0x404056]</text>
 </g>
 <!-- 0&#45;&gt;1 -->
 <g id="edge1" class="edge"><title>0&#45;&gt;1</title>
