@@ -18,7 +18,7 @@
   An advantage of Reven is that it **computes** all instructions being executed (instead of running them on real hardware), it is then virtually immune from anti-debugging/anti-instrumenting tricks that might be applied. Symbolically executed instructions come from all executing threads on the system since a *scenario is system-wide*; but we can always filter instructions executed by the examined binary, the result is somehow equivalent with the execution trace.
 
   **Remark:**
-  *The symbolic execution approach of Reven is different from approaches of debuggers and [dynamic](http://www.dynamorio.org/) [binary](https://software.intel.com/en-us/articles/pin-a-dynamic-binary-instrumentation-tool) [instrumentation](http://valgrind.org/) [tools](http://www.frida.re/) where instructions are still executed on the real hardware, that is still a rich source for [escaping tricks](https://recon.cx/2012/schedule/attachments/42FalconRiva2012.pdf) which exploit [nontransparent effects](https://www.blackhat.com/docs/us-14/materials/us-14-Li-Defeating-The-Transparency-Feature-Of-DBI.pdf) of DBI. Yet, Reven has to pay for this "more transparent" approach, it is slower than DBI tools and debuggers.*
+  *The approach of Reven is different from debuggers and [dynamic](http://www.dynamorio.org/) [binary](https://software.intel.com/en-us/articles/pin-a-dynamic-binary-instrumentation-tool) [instrumentation](http://valgrind.org/) [tools](http://www.frida.re/) where instructions are still executed on the real hardware, that is still a rich source for [escaping tricks](https://recon.cx/2012/schedule/attachments/42FalconRiva2012.pdf) which exploit [nontransparent effects](https://www.blackhat.com/docs/us-14/materials/us-14-Li-Defeating-The-Transparency-Feature-Of-DBI.pdf) of DBI. Yet, Reven has to pay for this "more transparent" approach, it is slower than DBI tools and debuggers.*
 
   **Synchronization with IDA Pro:** Reven is rather a dynamic analysis tool, it has not yet advanced static analysis features (static disassembly/decompilation, control-flow analysis, etc) that we may normally observe in [other](https://www.hopperapp.com/) [tools](https://www.hex-rays.com/products/ida/). Currently, we can **synchronize** between Reven and IDA Pro (as a "de-facto" reverse code engineering tool) using [qb-sync](https://github.com/quarkslab/qb-sync) to combine the strength of both.
 
@@ -37,9 +37,9 @@
 
   *Second*, the "input related" instructions in a trace are not local, they instead spread out the long trace, that makes difficult to figure out how the input password is manipulated and checked; moreover the password checking algorithm is "mostly" constant time.
 
-  *Last but not least*, most instructions of the binary are encrypted, they are decrypted just before executing and are immediately re-encrypted later, so we cannot [unpack](https://www.cs.arizona.edu/people/debray/Publications/static-unpacking.pdf) it in the [classical sense](http://ftp.cs.wisc.edu/paradyn/papers/Roundy12Packers.pdf). Some authors classify such technique of code packing into [type VI](http://s3.eurecom.fr/docs/oakland15_packing.pdf), the most sophisticated class of binary code packers.
+  *Last but not least*, most instructions of the binary are encrypted, they are decrypted just before executing and are immediately re-encrypted later, so we cannot [unpack](https://www.cs.arizona.edu/people/debray/Publications/static-unpacking.pdf) it in the [classical sense](http://ftp.cs.wisc.edu/paradyn/papers/Roundy12Packers.pdf), even the [fixed-point semantics](https://www.cs.arizona.edu/people/debray/Publications/metamorphic.pdf) for [code-waves model](https://hal.inria.fr/hal-01257908/file/codisasm.pdf) does not work. Some authors classify such technique of code packing into [type VI](http://s3.eurecom.fr/docs/oakland15_packing.pdf), the most sophisticated class of binary code packers.
 
-  These properties make difficult for direct dynamic/concolic/static analysis. Low-hanging fruit approaches, e.g. black-box attack on counting number of executed instructions, seems not feasible: there is volume of more than 2.7 billion instructions must be passed before reaching the first "input sensitive" comparison
+  These properties make difficult for direct dynamic/concolic/static analysis, this binary is a good counterexample which invalidates hypothesis in current automated code deobfuscation approaches. Low-hanging fruit approaches, e.g. black-box attack on counting number of executed instructions, seems not feasible: there is volume of more than 2.7 billion instructions must be passed before reaching the first "input sensitive" comparison
 
 ## Workaround
 
@@ -68,7 +68,7 @@
 
   We now know that the binary will modify some instructions before executing them, this can be revealed by examining the instructions following `call 0x40400`. 
 
-#### Control flow graph
+#### Global control flow graph
 
   To get an intuition about what is going on, we extract a partial *control flow graph* from the trace of Reven; the following graph is constructed from a trace of 10.000.000 instructions starting from `0x402048`.
 
@@ -93,9 +93,9 @@
   ![Instruction counting](./reven_ins_count_histo.svg)
 
   **Remark:**
-  *Such a form of control flow graph can be observed also in binaries obfuscated by [VMProtect](http://vmpsoft.com/) and some initial versions of [Code Virtualizer](http://oreans.com/codevirtualizer.php). In recent versions, Code Virtualizer uses [threaded code](http://home.claranet.nl/users/mhx/ForthBell.pdf): the control flow to the next opcode's basic block will be calculated at the end of the current opcode's basic block, then we cannot observe this form. In some ad-hoc VM obfuscated binaries, e.g. [HyperUnpackMe2](http://crackmes.de/users/thehyper/hyperunpackme2/), the dispatcher has even multiple dispatch points (there was a very nice [writeup](http://www.openrce.org/articles/full_view/28) of this binary using IDA).*
+  *Such a form of control flow graph can be observed also in binaries obfuscated by [VMProtect](http://vmpsoft.com/) and some early versions of [Code Virtualizer](http://oreans.com/codevirtualizer.php). In recent versions, Code Virtualizer uses [threaded code](http://home.claranet.nl/users/mhx/ForthBell.pdf): the control flow to the next opcode's basic block will be calculated at the end of the current opcode's basic block, then we cannot observe this form. In some ad-hoc VM obfuscated binaries, e.g. [HyperUnpackMe2](http://crackmes.de/users/thehyper/hyperunpackme2/), the dispatcher has even multiple dispatch points (there was a very nice [writeup](http://www.openrce.org/articles/full_view/28) of this binary using IDA).*
   
-  It might be worth noting that the patterns discussed above *just give a hint* to recognize the applied obfuscation technique. Without a serious analysis, we cannot confirm the binary is obfuscated by a VM. Indeed, the same patterns can be observed in programs which are not obfuscated at all; inversely, some program are VM obfuscated but these pattern are not [directly visible](http://www.lancaster.ac.uk/staff/wangz3/publications/trustcom.pdf). Finally, we do not give a formal definition (i.e. a mathematical model on which we can prove something is correct or not) for virtualization obfuscation yet :-). We will come back to this problem in another article.
+  It might be worth noting that the patterns discussed above *just give a hint* to recognize the applied obfuscation technique. Without a serious analysis, we cannot confirm the binary is obfuscated by a VM. Indeed, the same patterns can be observed in programs which are not obfuscated at all, and conversely some program are VM obfuscated but these pattern are not [directly visible](http://www.lancaster.ac.uk/staff/wangz3/publications/trustcom.pdf). Finally, we do not give a formal definition (i.e. a mathematical model on which we can prove something is correct or not) for virtualization obfuscation yet :-). We will come back to this problem in next articles.
 
 ## Reversing the first virtual machine
 
@@ -109,9 +109,10 @@
 
 #### Return address table
 
-  As can be seen previously in the "global" CFG, the `ret` instruction at `0x40404e` will transfer the control flow to different basic blocks, but the continued instructions are not the ones following `call 0x404000`. The called function is then not a "standard" function which we normally observe in an Algol-like language: it does not return to the location following where it is called, the returned address must be [modified](https://en.wikipedia.org/wiki/Return-oriented_programming) somewhere.
+  As can be seen previously in the global CFG, the `ret` instruction at `0x40404e` will transfer the control flow to different basic blocks, but the continued instructions are not the ones following `call 0x404000`. The called function is then not a "standard" function which we normally observe in an [Algol-like language](http://c2.com/cgi/wiki?AlgolFamily): it does not return to the location following where it is called. The [returned address](https://en.wikipedia.org/wiki/Return-oriented_programming) must be modified somewhere.
 
-  **Return address modification:** Looking into instructions at `0x404005` and `0x404009`, we observe that the original return address is saved to the memory at `0x404056`, then the return address is overwritten by the instruction `mov [esp + 0x14], eax` at `0x404045`. This new address is computed from a loop between `0x404030` and `0x40403b`.
+  **Return address modification:** 
+  looking into instructions at `0x404005` and `0x404009`, we observe that the original return address is saved to the memory at `0x404056`, then the return address is overwritten by the instruction `mov [esp + 0x14], eax` at `0x404045`. This new address is computed from a loop between `0x404030` and `0x40403b`.
 
   The semantics of the loop is simple: it consumes `ebx` which is the current return address (c.f. `pop` at `0x40402a` as well as `push` at `0x40400f`), and a list at address `0x404309`. It  looks for an entry in the list so that its `return address` is equal to the current return address. When the entry is found, the new return address is updated by the `transition code` of the entry. The structure of this list is shown below.
 
@@ -129,16 +130,17 @@
 
 #### Address interval computation and encryption
 
-  We now notice to call instructions at `0x404016` and `0x404022`, the called functions are "standard", i.e. they return back to where they are called. These functions are strongly correlated, their semantics is simple but important.
+  We now notice to call instructions at `0x404016` and `0x404022`, the called functions are standard (i.e. they return back to the location following where they are called). These functions are strongly correlated, their semantics is simple but important.
 
-  **Address interval:** the first one consumes a `dword` at `0x404052` (through `ebx`), a table of `dword`(s) at `0x40406d`; and return the first pair of two consecutive `dword`(s) of this table (through `ecx` and `edx`) satisfying `ecx <= ebx <= edx`. The following piece of code shows the algorithm.
+  **Address interval computation:** 
+  the first function consumes a `dword` at `0x404052` (through `ebx`), a table of `dword`(s) at `0x40406d`; and return the first pair of two consecutive `dword`(s) of this table (through `ecx` and `edx`) satisfying `ecx <= ebx <= edx`. The following piece of code shows the algorithm.
 
     // inTable is the array of dword(s) from 0x404052 to 0x40424d
     let calculateGadgetInterval inEbx inTable =
       let loBounds, hiBounds = List.foldBack (fun addr (los, his) -> addr :: his, los) inTable ([], [])
       List.find (fun (lo, hi) -> (lo <= inEbx && inEbx <= hi)) <| List.zip loBounds hiBounds
 
-  **Interval encryption:** the second consumes the output of the first one as an interval of addresses and the string `IsThisTheFlag?` (no, we have tried, and it is not the flag :-/), it simply `xor` this interval with this string using [ECB mode](https://en.wikipedia.org/wiki/Block_cipher_mode_of_operation).
+  **Code gadget encryption:** the second consumes the output of the first one as an interval of addresses and the string `IsThisTheFlag?` (no, we have tried, and it is not the flag :P), it simply `xor` this interval with this string using [ECB mode](https://en.wikipedia.org/wiki/Block_cipher_mode_of_operation).
 
 #### Summary
 
@@ -161,7 +163,7 @@ So in the first phase, which starts by `pushfd` at `0x40400` and terminates by `
     0x404588; 0x404597; 0x4045a6; 0x4045b5; 0x4045c4; 0x4045d6; 0x4045e5; 0x4045f4; 0x404603; 0x404612; 
     0x404621; 0x404630; 0x40463f; 0x40464e; 0x40465d; 0x40466c; 0x40467b; 0x40468a; 0x404699; 0x4046a8
 
-  We can also check these addresses on the "global" control flow graph, all of them terminates with the instruction `jmp 0x40428c` which transfers the control flow to the second phase of the dispatcher.
+  We can also check these addresses on the global control flow graph above, all of them terminates by an instruction `jmp 0x40428c` which transfers the control flow to the second phase of the dispatcher.
 
 ### Second phase
 
@@ -175,11 +177,21 @@ So in the first phase, which starts by `pushfd` at `0x40400` and terminates by `
   
 #### Inter-phase encryption/decryption relation
 
-  We observe also two calls, one at `0x4042c6` which calls the same function as one at `0x404016` in the first phase, and one at `0x4042d2` which calls another function but *the same semantics* as one at `0x404022` in the first phase (we still do not understand yet why there exist two functions which are exactly the same, this is obviously a code redundant)
+  There are also two calls, one at `0x4042c6` which calls the same function as  `0x404016` in the first phase, another at `0x4042d2` which calls a different function but *exactly the same* as one at `0x404022` (also in the first phase). 
+  
+  **Remark:**
+  *We still do not understand yet why the functions called at `0x404022` (in the first phase) and `0x4042d2` (in the second) are exactly the same; this is obviously a code redundant. :-/*
 
-  Let us recall that the two functions called in the first phase consume first a `dword` stored at `0x404052` to calculate an address interval, then `xor` this interval with `IsThisTheFlag?`. The functions called in the second phase do exactly the same thing, except that they consume a `dword` either stored at `0x404056` (c.f. the instruction at `0x4042b6`) or extracted from `ecx+0x6` (c.f. the instruction at `0x40429d`). 
+  Let us recall that the functions in the first phase consume first a `dword` stored at `0x404052` to calculate an address interval, then `xor` this interval with `IsThisTheFlag?`. The functions in the second phase do exactly the same thing, except that they consume a `dword` either stored at `0x404056` (c.f. the instruction at `0x4042b6`) or extracted from `ecx+0x6` (c.f. the instruction at `0x40429d`).
   
-  We notice the `dword` at `0x404056` which has been used in the first phase to store the *original return address* (c.f. instruction at `0x404009`). Moreover, the `dword` consumed in the first phase comes from `0x404052`, now in the second phase we know that `0x404052` is used to store the value consumed by the two functions (c.f. the instruction at `0x4042bc`). 
+  The `dword` consumed in the first phase comes from `0x404052`. Initially, when analyzing the first phase, we do not understand where the value at `0x404052` comes from; but now in the second phase we know that `0x404052` is used to store the value consumed by the two functions (c.f. the instruction at `0x4042bc`).
+      
+  **Code gadget encryption/decryption:**
+  so the pair of functions called in each phase consumes *the same value* to calculate an interval of address, then `xor` this interval with the string `IsThisTheFlag?`. The second phase then forwards the control flow to this `xor`ed code interval (which represents a code gadget). But `xor`ing with the same string will restore the original data, we now understand the opcode encryption/decryption mechanism of the dispatcher: *the first phase encrypts the last executed code gadget, the second one decrypts the gadget to be executed next*, this is an evil trick :-S.
   
-  So the two functions called in each phase consume *the same value* to calculate an interval of address, then `xor` this interval with the string `IsThisTheFlag?`, the second phase will transfers the control flow to the `xor`ed code interval (which represents an opcode). But `xor`ing with the same string will restore the original data, we now come to one of the evil tricks of the dispatcher: **the first phase has indeed encrypted the last executed opcode, the second one decrypt the opcode to be executed next**.
+  **Remark:**
+  *One may wonder that the conclusion above may be not correct if some opcodes can interfere in the code encryption/decryption, but we are pretty sure that this case does not happen: running several scenarios with different inputs, Reven confirms that this happens only in the dispatcher.*
   
+#### Next executed opcode address calculation
+  
+  The return address of the second phase determines the address of the next executed gadget. It comes either from `0x404056` or `[ecx+0x6]` where `ecx` gets value from `0x40405a` (c.f. the instruction at `0x404293`). In the first phase, the `dword` at `0x404056` has been used to store the *original return address* (c.f. the instruction at `0x404009`), whereas `0x40405a` has been used to store the address of an entry in the `return address table` - this entry's address is calculated, again, from the *original return address*.
