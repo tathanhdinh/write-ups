@@ -39,13 +39,13 @@
 
   *Last but not least*, most instructions of the binary are encrypted, they are decrypted just before executing and are immediately encrypted later, so we cannot [unpack](https://www.cs.arizona.edu/people/debray/Publications/static-unpacking.pdf) it in the [classical sense](http://ftp.cs.wisc.edu/paradyn/papers/Roundy12Packers.pdf). The code [formal approximation](https://en.wikipedia.org/wiki/Abstract_interpretation) using [phase semantics](https://www.cs.arizona.edu/people/debray/Publications/metamorphic.pdf) works but its result is trivial: the fixed point is too coarse to analyze on. More relaxed approaches based on code [phases](https://www.semanticscholar.org/paper/Reverse-Engineering-Self-Modifying-Code-Unpacker-Debray-Patel/01e90e360114da419a98591c2b58ec54154d6a0b/pdf) or [waves](https://hal.inria.fr/hal-01257908/file/codisasm.pdf) cannot apply since they require that the code must be "stable" at some execution point. Recently, some authors classify such technique of code packing into [type VI](http://s3.eurecom.fr/docs/oakland15_packing.pdf), the most sophisticated class of binary code packers.
 
-  These properties make difficult for direct dynamic/concolic/static analysis, this binary is a good counterexample which invalidates hypothesis in current automated code deobfuscation approaches. Low-hanging fruit approaches, e.g. black-box attack on counting number of executed instructions, seems not feasible: there is volume of more than 2.7 billion instructions must be passed before reaching the first "input sensitive" comparison
+  These properties make difficult for direct dynamic/concolic/static analysis, this binary is a fine counterexample which invalidates hypothesis in current automated code deobfuscation methods. Low-hanging fruit approaches, e.g. black-box attack on counting number of executed instructions, seems not feasible: there is volume of more than 2.7 billion instructions must be passed before reaching the first "input sensitive" comparison
 
 ## Workaround
 
-  The binary has 4 sections, all are marked as executable, writable and executable (how evil it is :-)). The section `.frisk0` is simply an ID of all GreHack's binaries, so we are not surprise. The binary starts from `0x402000` which is also the entry point, no TLS callback trick is applied, as confirmed by both Reven and IDA.
+  The binary has 4 sections, all are marked as executable, writable and executable, how evil it is >:). The section `.frisk0` seems only an ID of all GreHack's binaries, so we are not surprise. The binary starts from `0x402000` which is also the entry point, no TLS callback trick is applied, as confirmed by both Reven and IDA.
 
-  Several first instructions are not interesting, for example, ones at `0x402008` and `0x402013` are calls to `GetStdHandle`, there is also a call `WriteFile` at `0x40202c`, and a call `ReadFile` at `0x402042`. They simply print the strings `Welcome!` and `Password?`, then reads password from the standard input.
+  Several first instructions are not interesting, for example, ones at `0x402008` and `0x402013` are calls to `GetStdHandle`, there is also a call `WriteFile` at `0x40202c`, and a call `ReadFile` at `0x402042`. They print the strings `Welcome!` and `Password?`, then reads password from the standard input.
 
   ![Synchronization between REVEN-Axion and IDA Pro](./reven_sync_idapro.png)
 
@@ -63,20 +63,18 @@
   There must be something following `call 0x40400` has modified the instruction at `0x402058`. By backward [dynamic tainting analysis](http://bitblaze.cs.berkeley.edu/papers/taintcheck-full.pdf), Reven shows a chain of `read/write/execute` on this address, the nearest instruction which writes on the address is at `0x4042fa`, that is `stosb`.
 
   ![Overwriting instruction](./reven_overwritting_ins.png)
+  
+### Global control flow graph
 
-### Code virtualization
-
-  We now know that the binary will modify some instructions before executing them, this can be revealed by examining the instructions following `call 0x40400`. 
-
-#### Global control flow graph
-
-  To get an intuition about what is going on, we extract a partial *control flow graph* from the trace of Reven; the following graph is constructed from a trace of 10.000.000 instructions starting from `0x402048`.
+  We now know that the binary will modify some instructions before executing them, this can be revealed by examining the instructions following `call 0x40400` but to get quickly an intuition about what is going on, we extract a partial *control flow graph* from the trace of Reven; the following graph is constructed from a trace of 10.000.000 instructions starting from `0x402048`.
 
   ![Partial control flow graph](./F4b_cfg_n.svg)
   (this is a high-resolution image, click on it to observe the details)
 
   **Remark:**
   *The control flow graph given by Reven is partial since it is constructed using the dynamic trace computed from running program with a concrete input, but it gives at least some information about which kind of code that we deal with.*
+
+### Code virtualization
 
   The form of control flow graph suggests that it may be a kind of **virtual machine** with [switch-based dispatcher](http://static.usenix.org/event/woot09/tech/full_papers/rolles.pdf). The typical form of such a VM consists of a *dispatcher* located in several basic blocks, but there would exist many "non trivial" basic blocks to which control flow is transferred from a much smaller number of "dispatch points".
 
@@ -99,7 +97,7 @@
 
 ## Reversing the first virtual machine
 
-  Our intuition is now that there is VM whose entry point starts with `0x404000`, and single dispatch point ends at `0x4042e0`. To understand in details how it works, we now careful examine its dispatcher, whose the entry point is at `0x404000`.
+  So we have an intuition that there may exist a VM whose entry point of the dispatcher starts with `0x404000`, and single dispatch point ends at `0x4042e0`. We reverse now the dispatcher to understand in details how it works.
 
 ### First phase
 
@@ -140,7 +138,7 @@
       let loBounds, hiBounds = List.foldBack (fun addr (los, his) -> addr :: his, los) inTable ([], [])
       List.find (fun (lo, hi) -> (lo <= inEbx && inEbx <= hi)) <| List.zip loBounds hiBounds
 
-  **Code interval encryption:** the second consumes the output of the first one as an interval of addresses and the string `IsThisTheFlag?` (no, we have tried, and it is not the flag :P), it simply `xor` this interval with this string using [ECB mode](https://en.wikipedia.org/wiki/Block_cipher_mode_of_operation).
+  **Code interval encryption:** the second consumes the output of the first one as an interval of addresses and the string `IsThisTheFlag?` (no, we have tried, and it is not the flag :P), it simply `xor` this interval with this string under [ECB mode](https://en.wikipedia.org/wiki/Block_cipher_mode_of_operation).
 
 #### Summary
 
@@ -187,10 +185,16 @@ So in the first phase, which starts by `pushfd` at `0x40400` and terminates by `
   The `dword` consumed in the first phase comes from `0x404052`. Initially, when analyzing the first phase, we do not understand where the value at `0x404052` comes from; but now in the second phase we know that `0x404052` is used to store the value consumed by the two functions (c.f. the instruction at `0x4042bc`).
       
   **Code gadget encryption/decryption:**
-  so the pair of functions called in each phase consumes *the same value* to calculate an interval of address, then `xor` this interval with the string `IsThisTheFlag?`. The second phase then forwards the control flow to this `xor`ed code interval (which represents a code gadget). But `xor`ing with the same string will restore the original data, we now understand the opcode encryption/decryption mechanism of the dispatcher: *the first phase encrypts the last executed code gadget, the second one decrypts the gadget to be executed next*, this is an evil trick :-S.
+  so the pair of functions called in each phase consumes *the same value* to calculate an interval of address, then `xor` this interval with the string `IsThisTheFlag?`. The second phase then forwards the control flow to this `xor`ed code interval (which represents a code gadget). But `xor`ing with the same string will restore the original data. 
   
-  **Remark:**
-  *One may wonder that the conclusion above may be not correct if some opcodes can interfere in the code encryption/decryption, but we are pretty sure that this case does not happen: running several scenarios with different inputs, Reven confirms that code encryption/decryption happens only in the dispatcher.*
+  By running several scenarios with different inputs, Reven confirms that *the code encryption/decryption happens only in the dispatcher*, the gadgets do not interfere in the code encryption/decryption. So the code gadget encryption/decryption mechanism of the dispatcher is clear now, it is summarized in the following algorithm: 
+  
+  1. the first phase computes the last executed gadget from the stored entry point, next
+  2. encrypts this gadget (`xor` with `IsThisTheFlag?`).
+  3. the second phase calculates the entry point of the next gadget, and
+  4. uses this value to compute the next encrypted gadget, then
+  5. decrypts this gadget (`xor` with `IsThisTheFlag?`), finally
+  6. forwards the control flow to the entry point of the gadget.
   
 #### Next executed gadget address calculation
   
@@ -217,10 +221,23 @@ So in the first phase, which starts by `pushfd` at `0x40400` and terminates by `
 
   ![Flag registers loading](./lahf.svg)
 
-  So we have the following table which represents the flag register used and `flag % 2`(i.e. the value which the flag register is compared with), for each value of `flag`
+  So we have the following table which represents "the kind of comparison" between the flag register and `flag % 2`, for each value of `flag`, the result of this comparison will decide whether the condition jump at `0x4042b4` does take or not.
 
     flag | flag / 2 | flag % 2 | compare with
-    ------------------------------------------
+    ---------------------------------------------
     16   | 8        | 0        | CF
     17   | 8        | 1        | CF
+    19   | 9        | 1        | 1 (always true)
+    28   | 14       | 0        | ZF
+    29   | 14       | 1        | ZF
     
+  That means if the value of `flag` is 16, then the conditional jumps depends on comparing the carry flag with 0; if `flag` is 17 then on comparing the carry flag with 1; etc. Interestingly, if the `flag` is 19, then the conditional jumps always take.
+  
+  **Gadget address calculation:** so the address of the next executed gadget has been calculated using the following simple algorithm:
+  1. use the original return address to find the corresponding entry in the return address table,
+  2. extract the value of `flag` field, use the table above find the corresponding flag register,
+  3. compare `flag % 2` with this flag register; if they are equal, then
+  4. the next executed address is extracted from the field `next return address` of the entry, otherwise
+  5. it is the original return address.
+  
+### Opcode layout
