@@ -237,7 +237,7 @@ So in the first phase, which starts by `pushfd` at `0x40400` and terminates by `
   1. use the original return address to find the corresponding entry in the return address table,
   2. extract the value of `flag` field, use the table above find the corresponding flag register,
   3. compare `flag % 2` with this flag register; if they are equal, then
-  4. the next executed address is extracted from the field `next return address` of the entry, otherwise
+  4. the next executed address is the value of the field `next return address` of the entry, otherwise
   5. it is the original return address.
   
 ### Opcode layout
