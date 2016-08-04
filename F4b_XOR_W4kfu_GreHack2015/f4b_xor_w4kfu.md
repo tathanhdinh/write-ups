@@ -1,4 +1,4 @@
-# Deobfuscating an _onion_ obfuscated challenge with REVEN
+# Reversing an _onion_ obfuscated challenge with REVEN
 
   We present a code reverse engineering task with our product Reven. The binary examined here is `F4b_XOR_W4kfu`, it is also the challenge of the highest point over all categories (cryptography, exploit, reverse engineering, etc) in the [Grehack 2015's CTF](https://grehack.fr/2015/ctf). The binary is heavily obfuscated, but the obfuscation techniques implemented are novel and interesting.
 
@@ -33,7 +33,7 @@
     Password? 1234aqzert
     Nop!⏎
 
-  The program uses several **obfuscation** techniques to prevent itself from being analyzed. *First*, its execution traces are extremely long taking consideration that the program is *just* a CTF challenge; to get some idea about how long are these trace, after receiving the input, there are 2.716.465.511 instructions executed until the first comparison of the password checking procedure. This is because of a [code decryption/re-encryption](https://www.cosic.esat.kuleuven.be/wissec2006/papers/3.pdf) mechanism and of a [nested multiprocess virtual machine](https://aspire-fp7.eu/spro/wp-content/uploads/SPRO2015_Workshop_Talk_V2.pdf) execution model.
+  The program uses several **obfuscation** techniques to prevent itself from being analyzed. *First*, its execution traces are extremely long taking consideration that the program is *just* a CTF challenge. To get some idea about how long these traces are, after receiving the input, there are 2.716.465.511 instructions executed until the first comparison of the password checking procedure. This is because of a [code decryption/re-encryption](https://www.cosic.esat.kuleuven.be/wissec2006/papers/3.pdf) mechanism and of a [nested multiprocess virtual machine](https://aspire-fp7.eu/spro/wp-content/uploads/SPRO2015_Workshop_Talk_V2.pdf) execution model.
 
   *Second*, the "input related" instructions in a trace are not local, they instead spread out the long trace, that makes difficult to figure out how the input password is manipulated and checked; moreover the password checking algorithm is "mostly" constant time.
 
@@ -78,15 +78,14 @@
 
   The form of control flow graph suggests that it may be a kind of **virtual machine** with [switch-based dispatcher](http://static.usenix.org/event/woot09/tech/full_papers/rolles.pdf). The typical form of such a VM consists of a *dispatcher* located in several basic blocks, but there would exist many "non trivial" basic blocks to which control flow is transferred from a much smaller number of "dispatch points".
 
-  These non trivial basic blocks representing opcodes are possibly, for example, ones start with the instruction at `0x402513`, `0x40206a`, `0x4025d`, etc; the control flow transferred to all of them comes from the basic block ends with `0x4042e0`, which may be supposed that this is the *dispatch point* of the dispatcher.
+  These non trivial basic blocks representing opcodes are possibly, for example, ones start with the instruction at `0x402513`, `0x40206a`, `0x4025d`, etc; the control flow transferred to all of them comes from the basic block ends with `0x4042e0`, which may be supposed that this is the *dispatch point* of the dispatcher. Moreover, these basic blocks transfer control flow to the same basic block start with the address `0x404000` (since they both end with `call 0x404000`), which may be supposed that this is the *entry point* of the dispatcher.
 
-  Moreover, these basic blocks transfer control flow to the same basic block start with the address `0x404000` (since they both end with `call 0x404000`), which may be supposed that this is the *entry point* of the dispatcher.
-
-  There are also basic blocks, for example, ones start with `0x4043a4`, `0x404371`, `0x40428c`, etc; they might not represent opcodes since their semantics is trivial, just a simple unconditional`jmp 0x40428`.
+  **Remark:**
+  *There are basic blocks, for example, at `0x4043a4`, `0x404371`, `0x40428c`, etc. which come from (and reach to) the same basic block; but they might not represent opcodes since their semantics is trivial, just a simple unconditional`jmp 0x40428`.*
 
 #### Distinguished instruction rate
 
-  Another indication which suggests that this might be a VM, is the number of distinguished instructions over the total number of executed instructions. Since the number of "virtual instructions" is normally much smaller than the number of the real hardware instructions (i.e.`x86` ISA), we would normally observe that there are not "too much" distinguished instructions in a binary obfuscated by a VM. The following diagram presents the number of distinguished instructions over the trace length: there are only about 500 distinguished instructions over a trace of length 10.000.000!!!
+  Another criterion supporting the intuition about VM obfuscation, is *the number of distinguished instructions over the total number of executed instructions*. Since the number of "virtual instructions" is normally much smaller than the number of the real hardware instructions (i.e.`x86` ISA), we would normally observe that there are not "too much" distinguished instructions in a binary obfuscated by a VM. The following diagram presents the number of distinguished instructions over the trace length: there are only about 500 distinguished instructions over a trace of length 10.000.000!!!
 
   ![Instruction counting](./reven_ins_count_histo.svg)
 
@@ -142,17 +141,22 @@
 
 #### Summary
 
-So in the first phase, which starts by `pushfd` at `0x40400` and terminates by `ret` at `0x40404e`:
-
-* the original return address is backed up in the memory at `0x404056`,
-* an interval of addresses is calculated from a `dword` stored in the memory `0x404052`, then
-* the interval is `xor`ed with the string `IsThisTheFlag?`,
-* a new return address is calculated from the original one and a table of consecutive entries, 
-* the address of the entry containing the new address is backed up in the memory at `0x40405a`.
+  By statically reversing instructions of the first phase, not everything is clear until now, but we have obtained some information. Concretely, the first phase has:
+  
+    * backed up the original return address as a `dword` at `0x404056`,
+    * calculated an interval of addresses using a `dword` stored at `0x404052`, then
+    * `xor`ed the interval with the string `IsThisTheFlag?`,
+    * used the original return address to find an entry in the return address table, next 
+    * calculated the address of `transition code` of this entry, and
+    * used this address to replace the original return address at the stack, then
+    * backed up the address of the entry as a `dword` at `0x40405a`, finally
+    * used `ret` to transfer the control flow to the `transition code`.
+  
+  At this point, honestly, we cannot yet "prove" the meaning of the address interval, neither the `dword` stored at `0x404052` (we will do this later). But using the global control flow graph, and dynamically checking on Reven how these addresses are used, we **already know** that each interval is actually the bound of the basic block representing an opcode, the `dword` at `0x404052` stores nothing but the entry point of the last executed opcode. One using other tools might think that this is tricky :P, but Reven is really helpful in suggesting what happened.
 
 ### Transition code
 
-  Since the effect of the return address modification, the control flow is transferred to the transition instructions located at the new return address. We have introduced above the structure of the list of entries used to calculate the new return addresses. The new return addresses, i.e. locations of transition code, can be extracted easily now.
+  Because of the effect of `ret`, the control flow is transferred to transition instructions located at the `transition code`. The addresses of transition code can be extracted easily using the structure of the return address table introduced above.
 
     0x404313; 0x404322; 0x404331; 0x404344; 0x404353; 0x404362; 0x404371; 0x404380; 0x40438f; 0x4043a4; 
     0x4043b3; 0x4043c2; 0x4043d1; 0x4043e3; 0x4043f2; 0x404401; 0x404410; 0x40441f; 0x40442e; 0x40443d; 
@@ -180,21 +184,88 @@ So in the first phase, which starts by `pushfd` at `0x40400` and terminates by `
   **Remark:**
   *We still do not understand yet why the functions called at `0x404022` (in the first phase) and `0x4042d2` (in the second) are exactly the same; this is obviously a code redundant. :-/*
 
-  Let us recall that the functions in the first phase consume first a `dword` stored at `0x404052` to calculate an address interval, then `xor` this interval with `IsThisTheFlag?`. The functions in the second phase do exactly the same thing, except that they consume a `dword` either stored at `0x404056` (c.f. the instruction at `0x4042b6`) or extracted from `ecx+0x6` (c.f. the instruction at `0x40429d`).
+  We recall that the functions in the first phase consume first a `dword` stored at `0x404052` to calculate an address interval, then `xor` this interval with `IsThisTheFlag?`. The functions in the second phase do exactly the same thing, except that they consume a `dword` either stored at `0x404056` (c.f. the instruction at `0x4042b6`) or extracted from `ecx+0x6` (c.f. the instruction at `0x40429d`).
   
   The `dword` consumed in the first phase comes from `0x404052`. Initially, when analyzing the first phase, we do not understand where the value at `0x404052` comes from; but now in the second phase we know that `0x404052` is used to store the value consumed by the two functions (c.f. the instruction at `0x4042bc`).
       
   **Code gadget encryption/decryption:**
   so the pair of functions called in each phase consumes *the same value* to calculate an interval of address, then `xor` this interval with the string `IsThisTheFlag?`. The second phase then forwards the control flow to this `xor`ed code interval (which represents a code gadget). But `xor`ing with the same string will restore the original data. 
   
-  By running several scenarios with different inputs, Reven confirms that *the code encryption/decryption happens only in the dispatcher*, the gadgets do not interfere in the code encryption/decryption. So the code gadget encryption/decryption mechanism of the dispatcher is clear now, it is summarized in the following algorithm: 
+  By running several scenarios with different inputs, Reven confirms that *the code encryption/decryption happens only in the dispatcher*, the gadgets do not interfere in the code encryption/decryption. So the code gadget encryption/decryption mechanism of the dispatcher is pretty clear now, it is summarized in the following steps: 
   
-  1. the first phase computes the last executed gadget from the stored entry point, next
-  2. encrypts this gadget (`xor` with `IsThisTheFlag?`).
-  3. the second phase calculates the entry point of the next gadget, and
-  4. uses this value to compute the next encrypted gadget, then
-  5. decrypts this gadget (`xor` with `IsThisTheFlag?`), finally
-  6. forwards the control flow to the entry point of the gadget.
+    1. the first phase computes the last executed gadget from the stored entry point, next
+    2. encrypts this gadget (`xor` with `IsThisTheFlag?`).
+    3. the second phase calculates the entry point of the next gadget, and
+    4. uses this value to compute the next encrypted gadget, then
+    5. decrypts this gadget (`xor` with `IsThisTheFlag?`), finally
+    6. forwards the control flow to the entry point of the gadget.
+    
+  **Decrypting all code gadgets:** we can even decrypt all gadgets now, that leads also to statically decrypting all encrypted content of the binary. Indeed, given an original return address, we can compute the corresponding gadget, then decrypt the gadget by `xor`ing with `IsThisTheFlag?`. Moreover, all possible return addresses can be extracted by traversing the return address table: for each entry, extract its `return address` field. The list of all return addresses is:
+  
+    0x402058; 0x40207f; 0x4020d3; 0x4020df; 0x4020eb; 0x4020f0; 0x40217b; 0x4021c5; 0x4021d1; 0x4021dd; 
+    0x4021e9; 0x4021f5; 0x402201; 0x402206; 0x402250; 0x40227f; 0x4022c9; 0x4022f8; 0x40233a; 0x402346; 
+    0x402352; 0x40235e; 0x40236a; 0x4023d4; 0x4023de; 0x402428; 0x402434; 0x402440; 0x402445; 0x402460; 
+    0x402486; 0x4024c8; 0x4024cd; 0x402501; 0x40250d; 0x402513; 0x40254c; 0x402572; 0x40257c; 0x402582; 
+    0x4025b4; 0x4025cf; 0x4025df; 0x4025f6; 0x40260a; 0x40263c; 0x40266e; 0x4026cc; 0x4026de; 0x4026ea; 
+    0x40270f; 0x402721; 0x40272d; 0x402750; 0x402758; 0x40275f; 0x402766; 0x402772; 0x402779; 0x402780
+  
+  and the map between a return address and the address interval of the corresponding gadget is:
+  
+    0x402058 => [0x402058, 0x40207a]; 0x40207f => [0x40207f, 0x4020ce]; 0x4020d3 => [0x4020d3, 0x4020da]; 
+    0x4020df => [0x4020df, 0x4020e6]; 0x4020eb => [0x4020eb, 0x4020eb]; 0x4020f0 => [0x4020f0, 0x402176]; 
+    0x40217b => [0x40217b, 0x4021c0]; 0x4021c5 => [0x4021c5, 0x4021cc]; 0x4021d1 => [0x4021d1, 0x4021d8]; 
+    0x4021dd => [0x4021dd, 0x4021e4]; 0x4021e9 => [0x4021e9, 0x4021f0]; 0x4021f5 => [0x4021f5, 0x4021fc]; 
+    0x402201 => [0x402201, 0x402201]; 0x402206 => [0x402206, 0x40224b]; 0x402250 => [0x402250, 0x40227a]; 
+    0x40227f => [0x40227f, 0x4022c4]; 0x4022c9 => [0x4022c9, 0x4022f3]; 0x4022f8 => [0x4022f8, 0x402335]; 
+    0x40233a => [0x40233a, 0x402341]; 0x402346 => [0x402346, 0x40234d]; 0x402352 => [0x402352, 0x402359]; 
+    0x40235e => [0x40235e, 0x402365]; 0x40236a => [0x40236a, 0x4023cf]; 0x4023d4 => [0x4023d4, 0x4023d9]; 
+    0x4023de => [0x4023de, 0x402423]; 0x402428 => [0x402428, 0x40242f]; 0x402434 => [0x402434, 0x40243b]; 
+    0x402440 => [0x402440, 0x402440]; 0x402445 => [0x402445, 0x40245b]; 0x402460 => [0x402460, 0x402481]; 
+    0x402486 => [0x402486, 0x4024c3]; 0x4024c8 => [0x4024c8, 0x4024c8]; 0x4024cd => [0x4024cd, 0x4024fc]; 
+    0x402501 => [0x402501, 0x402508]; 0x40250d => [0x40250d, 0x40250e]; 0x402513 => [0x402513, 0x402547]; 
+    0x40254c => [0x40254c, 0x40256d]; 0x402572 => [0x402572, 0x402577]; 0x40257c => [0x40257c, 0x40257d]; 
+    0x402582 => [0x402582, 0x4025af]; 0x4025b4 => [0x4025b4, 0x4025ca]; 0x4025cf => [0x4025cf, 0x4025da]; 
+    0x4025df => [0x4025df, 0x4025f1]; 0x4025f6 => [0x4025f6, 0x402605]; 0x40260a => [0x40260a, 0x402637]; 
+    0x40263c => [0x40263c, 0x402669]; 0x40266e => [0x40266e, 0x4026c7]; 0x4026cc => [0x4026cc, 0x4026d9]; 
+    0x4026de => [0x4026de, 0x4026e5]; 0x4026ea => [0x4026ea, 0x40270a]; 0x40270f => [0x40270f, 0x40271c]; 
+    0x402721 => [0x402721, 0x402728]; 0x40272d => [0x40272d, 0x40274b]; 0x402750 => [0x402750, 0x402753]; 
+    0x402758 => [0x402758, 0x40275a]; 0x40275f => [0x40275f, 0x402761]; 0x402766 => [0x402766, 0x40276d]; 
+    0x402772 => [0x402772, 0x402774]; 0x402779 => [0x402779, 0x40277b]
+    
+  **Remark:** 
+  *one uses IDA Pro can use the following Python script to decrypt the binary, when synchronizing the IDA's view with Reven (using qb-sync plugin), we get familiar effect of debugging a program without caring that it is encrypted B-)*
+  
+    def decrypt_interval(lo_addr, hi_addr):
+	  print 'decrypting opcode from 0x{0:x} to 0x{1:x}'.format(lo_addr, hi_addr)
+	  mask_offset = 0x40405e
+	  for addr in range(lo_addr, hi_addr):
+		  orig_byte = Byte(addr)
+		  mask_byte = Byte(mask_offset)
+		  PatchByte(addr, orig_byte^mask_byte)
+		  mask_offset += 1
+		  if (Byte(mask_offset) == 0):
+		    mask_offset = 0x40405e
+
+    opcode_intervals = [(0x402058, 0x40207a), (0x40207f, 0x4020ce), (0x4020d3, 0x4020da), (0x4020df, 0x4020e6), 
+                        (0x4020eb, 0x4020eb), (0x4020f0, 0x402176), (0x40217b, 0x4021c0), (0x4021c5, 0x4021cc), 
+                        (0x4021d1, 0x4021d8), (0x4021dd, 0x4021e4), (0x4021e9, 0x4021f0), (0x4021f5, 0x4021fc), 
+                        (0x402201, 0x402201), (0x402206, 0x40224b), (0x402250, 0x40227a), (0x40227f, 0x4022c4), 
+                        (0x4022c9, 0x4022f3), (0x4022f8, 0x402335), (0x40233a, 0x402341), (0x402346, 0x40234d), 
+                        (0x402352, 0x402359), (0x40235e, 0x402365), (0x40236a, 0x4023cf), (0x4023d4, 0x4023d9), 
+                        (0x4023de, 0x402423), (0x402428, 0x40242f), (0x402434, 0x40243b), (0x402440, 0x402440), 
+                        (0x402445, 0x40245b), (0x402460, 0x402481), (0x402486, 0x4024c3), (0x4024c8, 0x4024c8), 
+                        (0x4024cd, 0x4024fc), (0x402501, 0x402508), (0x40250d, 0x40250e), (0x402513, 0x402547), 
+                        (0x40254c, 0x40256d), (0x402572, 0x402577), (0x40257c, 0x40257d), (0x402582, 0x4025af), 
+                        (0x4025b4, 0x4025ca), (0x4025cf, 0x4025da), (0x4025df, 0x4025f1), (0x4025f6, 0x402605), 
+                        (0x40260a, 0x402637), (0x40263c, 0x402669), (0x40266e, 0x4026c7), (0x4026cc, 0x4026d9), 
+                        (0x4026de, 0x4026e5), (0x4026ea, 0x40270a), (0x40270f, 0x40271c), (0x402721, 0x402728), 
+                        (0x40272d, 0x40274b), (0x402750, 0x402753), (0x402758, 0x40275a), (0x40275f, 0x402761), 
+                        (0x402766, 0x40276d), (0x402772, 0x402774), (0x402779, 0x40277b)]
+
+    for lo_addr, hi_addr in opcode_intervals:
+	    decrypt_interval(lo_addr, hi_addr)
+
+  ![Synchronization with decrypted result](./reven_sync_decrypt.png)
   
 #### Next executed gadget address calculation
   
@@ -234,10 +305,21 @@ So in the first phase, which starts by `pushfd` at `0x40400` and terminates by `
   That means if the value of `flag` is 16, then the conditional jumps depends on comparing the carry flag with 0; if `flag` is 17 then on comparing the carry flag with 1; etc. Interestingly, if the `flag` is 19, then the conditional jumps always take.
   
   **Gadget address calculation:** so the address of the next executed gadget has been calculated using the following simple algorithm:
-  1. use the original return address to find the corresponding entry in the return address table,
-  2. extract the value of `flag` field, use the table above find the corresponding flag register,
-  3. compare `flag % 2` with this flag register; if they are equal, then
-  4. the next executed address is the value of the field `next return address` of the entry, otherwise
-  5. it is the original return address.
   
-### Opcode layout
+    1. use the original return address to find the corresponding entry in the return address table,
+    2. extract the value of `flag` field, use the table above find the corresponding flag register,
+    3. compare `flag % 2` with this flag register; if they are equal, then
+    4. the next executed address is the value of the field `next return address` of the entry, otherwise
+    5. it is the original return address.
+  
+### Control flow recovering
+
+  The semantics of the dispatcher is fully disclosed now: given an original return address, we can calculate the possible next gadget's entry points. Our objective in reversing the first virtual machine is to *remove completely the dispatcher out of the control flow graph*, for that we need to know the transition between gadgets, or in other words the transition between gadget's entry points.
+  
+#### Gadget memory layout
+  
+  Let's remember that each code gadget terminates by a `call 0x404000`, so the original return address is nothing but the first instruction of the statically next gadget; or in other words, the gadgets are indeed juxtapositional in the memory. Moreover, for each gadget entry point `e`, we know that its address interval is `[lo, hi]` satisfying `lo <= e <= hi`
+
+  ![Gadget memory layout](./gadget_layout.svg)
+  
+  
