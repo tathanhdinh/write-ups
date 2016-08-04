@@ -35,11 +35,11 @@
 
   The program uses several **obfuscation** techniques to prevent itself from being analyzed. *First*, its execution traces are extremely long taking consideration that the program is *just* a CTF challenge. To get some idea about how long these traces are, after receiving the input, there are 2.716.465.511 instructions executed until the first comparison of the password checking procedure. This is because of a [code decryption/re-encryption](https://www.cosic.esat.kuleuven.be/wissec2006/papers/3.pdf) mechanism and of a [nested multiprocess virtual machine](https://aspire-fp7.eu/spro/wp-content/uploads/SPRO2015_Workshop_Talk_V2.pdf) execution model.
 
-  *Second*, the "input related" instructions in a trace are not local, they instead spread out the long trace, that makes difficult to figure out how the input password is manipulated and checked; moreover the password checking algorithm is "mostly" constant time.
+  *Second*, the "input related" instructions in a trace are not local, they spread out the long trace, that makes difficult to figure out how the input password is manipulated and checked. Moreover the password checking algorithm is "mostly" constant time.
 
   *Last but not least*, most instructions of the binary are encrypted, they are decrypted just before executing and are immediately encrypted later, so we cannot [unpack](https://www.cs.arizona.edu/people/debray/Publications/static-unpacking.pdf) it in the [classical sense](http://ftp.cs.wisc.edu/paradyn/papers/Roundy12Packers.pdf). The code [formal approximation](https://en.wikipedia.org/wiki/Abstract_interpretation) using [phase semantics](https://www.cs.arizona.edu/people/debray/Publications/metamorphic.pdf) works but its result is trivial: the fixed point is too coarse to analyze on. More relaxed approaches based on code [phases](https://www.semanticscholar.org/paper/Reverse-Engineering-Self-Modifying-Code-Unpacker-Debray-Patel/01e90e360114da419a98591c2b58ec54154d6a0b/pdf) or [waves](https://hal.inria.fr/hal-01257908/file/codisasm.pdf) cannot apply since they require that the code must be "stable" at some execution point. Recently, some authors classify such technique of code packing into [type VI](http://s3.eurecom.fr/docs/oakland15_packing.pdf), the most sophisticated class of binary code packers.
 
-  These properties make difficult for direct dynamic/concolic/static analysis, this binary is a fine counterexample which invalidates hypothesis in current automated code deobfuscation methods. Low-hanging fruit approaches, e.g. black-box attack on counting number of executed instructions, seems not feasible: there is volume of more than 2.7 billion instructions must be passed before reaching the first "input sensitive" comparison
+  These properties make difficult for direct dynamic/concolic/static analysis, this binary is also a fine counterexample which invalidates hypothesis in current automated code deobfuscation methods. Low-hanging fruit approaches, e.g. black-box attack on counting number of executed instructions, seems not feasible: there is volume of more than 2.7 billion instructions must be passed before reaching the first "input sensitive" comparison
 
 ## Workaround
 
@@ -66,7 +66,7 @@
   
 ### Global control flow graph
 
-  We now know that the binary will modify some instructions before executing them, this can be revealed by examining the instructions following `call 0x40400` but to get quickly an intuition about what is going on, we extract a partial *control flow graph* from the trace of Reven; the following graph is constructed from a trace of 10.000.000 instructions starting from `0x402048`.
+  We now know that the binary will modify some instructions before executing them, this can be revealed by examining the instructions following `call 0x40400`; but to get quickly an intuition about what is going on, we extract a partial *control flow graph* from the trace of Reven. The following graph is constructed from a trace of 10.000.000 instructions starting from `0x402048`.
 
   ![Partial control flow graph](./F4b_cfg_n.svg)
   (this is a high-resolution image, click on it to observe the details)
@@ -81,16 +81,16 @@
   These non trivial basic blocks representing opcodes are possibly, for example, ones start with the instruction at `0x402513`, `0x40206a`, `0x4025d`, etc; the control flow transferred to all of them comes from the basic block ends with `0x4042e0`, which may be supposed that this is the *dispatch point* of the dispatcher. Moreover, these basic blocks transfer control flow to the same basic block start with the address `0x404000` (since they both end with `call 0x404000`), which may be supposed that this is the *entry point* of the dispatcher.
 
   **Remark:**
-  *There are basic blocks, for example, at `0x4043a4`, `0x404371`, `0x40428c`, etc. which come from (and reach to) the same basic block; but they might not represent opcodes since their semantics is trivial, just a simple unconditional`jmp 0x40428`.*
+  *There are basic blocks, for example, at `0x4043a4`, `0x404371`, `0x40428c`, etc. which come from (and reach to) the same address; but they might not represent opcodes since their semantics is trivial, just a simple unconditional`jmp 0x40428`.*
 
 #### Distinguished instruction rate
 
-  Another criterion supporting the intuition about VM obfuscation, is *the number of distinguished instructions over the total number of executed instructions*. Since the number of "virtual instructions" is normally much smaller than the number of the real hardware instructions (i.e.`x86` ISA), we would normally observe that there are not "too much" distinguished instructions in a binary obfuscated by a VM. The following diagram presents the number of distinguished instructions over the trace length: there are only about 500 distinguished instructions over a trace of length 10.000.000!!!
+  Another criterion supporting the intuition about VM obfuscation, is *the number of distinguished instructions over the total number of executed instructions*. Since the number of "virtual instructions" is normally much smaller than the number of the real hardware instructions (i.e.`x86` ISA), we would observe that there are not "too much" distinguished instructions in a binary obfuscated by a VM. The following diagram presents the number of distinguished instructions over the trace length: there are only about 500 distinguished instructions over a trace of length 10.000.000!!!
 
   ![Instruction counting](./reven_ins_count_histo.svg)
 
   **Remark:**
-  *Such a form of control flow graph can be observed also in binaries obfuscated by [VMProtect](http://vmpsoft.com/) and some early versions of [Code Virtualizer](http://oreans.com/codevirtualizer.php). In recent versions, Code Virtualizer uses [threaded code](http://home.claranet.nl/users/mhx/ForthBell.pdf): the control flow to the next opcode's basic block will be calculated at the end of the current opcode's basic block, then we cannot observe this form. In some ad-hoc VM obfuscated binaries, e.g. [HyperUnpackMe2](http://crackmes.de/users/thehyper/hyperunpackme2/), the dispatcher has even multiple dispatch points (there was a very nice [writeup](http://www.openrce.org/articles/full_view/28) of this binary using IDA).*
+  *Such a form of control flow graph can be observed also in binaries obfuscated by [VMProtect](http://vmpsoft.com/) and some early versions of [Code Virtualizer](http://oreans.com/codevirtualizer.php). In recent versions, Code Virtualizer uses [threaded code](http://home.claranet.nl/users/mhx/ForthBell.pdf): the control flow to the next opcode's basic block will be calculated at the end of the current opcode, then we cannot observe this form. In some ad-hoc VM obfuscated binaries, e.g. [HyperUnpackMe2](http://crackmes.de/users/thehyper/hyperunpackme2/), the dispatcher has even multiple dispatch points (there was a very nice [writeup](http://www.openrce.org/articles/full_view/28) of this binary using IDA).*
   
   It might be worth noting that the patterns discussed above *just give a hint* to recognize the applied obfuscation technique. Without a serious analysis, we cannot confirm the binary is obfuscated by a VM. Indeed, the same patterns can be observed in programs which are not obfuscated at all, and conversely some program are VM obfuscated but these pattern are not [directly visible](http://www.lancaster.ac.uk/staff/wangz3/publications/trustcom.pdf). Finally, we do not give a formal definition (i.e. a mathematical model on which we can prove something is correct or not) for virtualization obfuscation yet :-). We will come back to this problem in next articles.
 
@@ -152,7 +152,7 @@
     * backed up the address of the entry as a `dword` at `0x40405a`, finally
     * used `ret` to transfer the control flow to the `transition code`.
   
-  At this point, honestly, we cannot yet "prove" the meaning of the address interval, neither the `dword` stored at `0x404052` (we will do this later). But using the global control flow graph, and dynamically checking on Reven how these addresses are used, we **already know** that each interval is actually the bound of the basic block representing an opcode, the `dword` at `0x404052` stores nothing but the entry point of the last executed opcode. One using other tools might think that this is tricky :P, but Reven is really helpful in suggesting what happened.
+  At this point, we cannot yet "prove" the meaning of the address interval, neither the `dword` stored at `0x404052` (we will do this later). But honestly, using the global control flow graph, and dynamically checking on Reven how these addresses are used, we **already know** that each interval is actually the bound of the basic block representing an opcode, the `dword` at `0x404052` stores nothing but the entry point of the last executed opcode. One using other tools might think that this is tricky :P, but Reven is really helpful in suggesting what happened.
 
 ### Transition code
 
@@ -200,7 +200,7 @@
     5. decrypts this gadget (`xor` with `IsThisTheFlag?`), finally
     6. forwards the control flow to the entry point of the gadget.
     
-  **Decrypting all code gadgets:** we can even decrypt all gadgets now, that leads also to statically decrypting all encrypted content of the binary. Indeed, given an original return address, we can compute the corresponding gadget, then decrypt the gadget by `xor`ing with `IsThisTheFlag?`. Moreover, all possible return addresses can be extracted by traversing the return address table: for each entry, extract its `return address` field. The list of all return addresses is:
+  **Decrypting all code gadgets:** we can decrypt all gadgets now, that leads to statically decrypting all encrypted content of the binary. Indeed, given an original return address, we can compute the corresponding gadget, then decrypt the gadget by `xor`ing with `IsThisTheFlag?`. Moreover, all possible return addresses can be extracted by traversing the return address table: for each entry, extract its `return address` field. The list of all return addresses is:
   
     0x402058; 0x40207f; 0x4020d3; 0x4020df; 0x4020eb; 0x4020f0; 0x40217b; 0x4021c5; 0x4021d1; 0x4021dd; 
     0x4021e9; 0x4021f5; 0x402201; 0x402206; 0x402250; 0x40227f; 0x4022c9; 0x4022f8; 0x40233a; 0x402346; 
@@ -233,7 +233,7 @@
     0x402772 => [0x402772, 0x402774]; 0x402779 => [0x402779, 0x40277b]
     
   **Remark:** 
-  *one uses IDA Pro can use the following Python script to decrypt the binary, when synchronizing the IDA's view with Reven (using qb-sync plugin), we get familiar effect of debugging a program without caring that it is encrypted B-)*
+  *one uses IDA Pro can use the following Python script to decrypt the binary, when synchronizing the IDA's view with Reven (using qb-sync plugin), then get a familiar effect of debugging a program but without caring that it is encrypted B-)*
   
     def decrypt_interval(lo_addr, hi_addr):
 	  print 'decrypting opcode from 0x{0:x} to 0x{1:x}'.format(lo_addr, hi_addr)
@@ -304,7 +304,7 @@
     
   That means if the value of `flag` is 16, then the conditional jumps depends on comparing the carry flag with 0; if `flag` is 17 then on comparing the carry flag with 1; etc. Interestingly, if the `flag` is 19, then the conditional jumps always take.
   
-  **Gadget address calculation:** so the address of the next executed gadget has been calculated using the following simple algorithm:
+  **Gadget entry point calculation:** so the address of the next executed instruction has been calculated using the following simple algorithm:
   
     1. use the original return address to find the corresponding entry in the return address table,
     2. extract the value of `flag` field, use the table above find the corresponding flag register,
@@ -314,7 +314,11 @@
   
 ### Control flow recovering
 
-  The semantics of the dispatcher is fully disclosed now: given an original return address, we can calculate the possible next gadget's entry points. Our objective in reversing the first virtual machine is to *remove completely the dispatcher out of the control flow graph*, for that we need to know the transition between gadgets, or in other words the transition between gadget's entry points.
+  The semantics of the dispatcher has been fully disclosed: given an original return address, we can calculate the possible next gadget's entry points. Our objective in reversing the first virtual machine is to reconstruct an equivalent model of execution without the dispatcher, in short, we need to *remove completely the dispatcher out of the control flow graph*. For that purpose, what we lack now is a **static relation** between gadgets. Concretely, we need to know the static control flow between gadgets, or more precisely between gadget's entry points.
+  
+#### Generating all entry points
+
+  We have listed all original return addresses above, each of them is naturally a gadget entry point, but there are more. From the entry point calculating above, we know that the field `next return address` of each entry is also a potential entry point
   
 #### Gadget memory layout
   
