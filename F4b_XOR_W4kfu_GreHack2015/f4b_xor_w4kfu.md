@@ -35,7 +35,7 @@
 
   The program uses several **obfuscation** techniques to prevent itself from being analyzed. *First*, its execution traces are extremely long taking consideration that the program is *just* a CTF challenge. To get some idea about how long these traces are, after receiving the input, there are 2.716.465.511 instructions executed until the first comparison of the password checking procedure. This is because of a [code decryption/re-encryption](https://www.cosic.esat.kuleuven.be/wissec2006/papers/3.pdf) mechanism and of a [nested multiprocess virtual machine](https://aspire-fp7.eu/spro/wp-content/uploads/SPRO2015_Workshop_Talk_V2.pdf) execution model.
 
-  *Second*, the "input related" instructions in a trace are not local, they spread out the long trace, that makes difficult to figure out how the input password is manipulated and checked. Moreover the password checking algorithm is "mostly" constant time.
+  *Second*, the "input related" instructions in a trace are not local, they spread out the long trace, and hard to be [sliced](https://en.wikipedia.org/wiki/Program_slicing). That makes difficult to figure out how the input password is manipulated and checked. Moreover the password checking algorithm is "mostly" constant time.
 
   *Last but not least*, most instructions of the binary are encrypted, they are decrypted just before executing and are immediately encrypted later, so we cannot [unpack](https://www.cs.arizona.edu/people/debray/Publications/static-unpacking.pdf) it in the [classical sense](http://ftp.cs.wisc.edu/paradyn/papers/Roundy12Packers.pdf). The code [formal approximation](https://en.wikipedia.org/wiki/Abstract_interpretation) using [phase semantics](https://www.cs.arizona.edu/people/debray/Publications/metamorphic.pdf) works but its result is trivial: the fixed point is too coarse to analyze on. More relaxed approaches based on code [phases](https://www.semanticscholar.org/paper/Reverse-Engineering-Self-Modifying-Code-Unpacker-Debray-Patel/01e90e360114da419a98591c2b58ec54154d6a0b/pdf) or [waves](https://hal.inria.fr/hal-01257908/file/codisasm.pdf) cannot apply since they require that the code must be "stable" at some execution point. Recently, some authors classify such technique of code packing into [type VI](http://s3.eurecom.fr/docs/oakland15_packing.pdf), the most sophisticated class of binary code packers.
 
@@ -175,7 +175,7 @@
  
 #### Return address modification
 
-  The second phase uses some similar tricks as the first one. The last instruction `ret` diverts also the control flow to different addresses, this is the effect of the instruction at `0x404208c` (which reverses a space for the return address), and one at `0x4042c2` (which fills the return address). From the global control flow graph, each return address commence a basic block corresponding with an opcode of the first virtual machine, we call such a basic block a [code gadget](https://en.wikipedia.org/wiki/Return-oriented_programming).
+  The second phase uses some similar tricks as the first one. The last instruction `ret` diverts also the control flow to different addresses, this is the effect of the instruction at `0x404208c` (which reverses a space for the return address), and one at `0x4042c2` (which fills the return address). From the global control flow graph, each return address commence a basic block corresponding with an opcode of the first virtual machine.
   
 #### Inter-phase encryption/decryption relation
 
@@ -199,6 +199,8 @@
     4. uses this value to compute the next encrypted gadget, then
     5. decrypts this gadget (`xor` with `IsThisTheFlag?`), finally
     6. forwards the control flow to the entry point of the gadget.
+    
+  **Remark:** *one should distinguish a gadget entry point from an original return address. A gadget is an interval address which is encrypted/decrypted as a whole, its entry points are addresses for which there are some control flow coming from another gadget. An original [return address](https://en.wikipedia.org/wiki/Return-oriented_programming) is naturally an entry point, but there are also entry points which are not a return address, a gadget may have several entry points, as we will show later.*
     
   **Decrypting all code gadgets:** we can decrypt all gadgets now, that leads to statically decrypting all encrypted content of the binary. Indeed, given an original return address, we can compute the corresponding gadget, then decrypt the gadget by `xor`ing with `IsThisTheFlag?`. Moreover, all possible return addresses can be extracted by traversing the return address table: for each entry, extract its `return address` field. The list of all return addresses is:
   
@@ -292,7 +294,7 @@
 
   ![Flag registers loading](./lahf.svg)
 
-  So we have the following table which represents "the kind of comparison" between the flag register and `flag % 2`, for each value of `flag`, the result of this comparison will decide whether the condition jump at `0x4042b4` does take or not.
+  We have the following table which represents "the kind of comparison" between the flag register and `flag % 2`, for each value of `flag`, the result of this comparison will decide whether the condition jump at `0x4042b4` does take or not.
 
     flag | flag / 2 | flag % 2 | compare with
     ---------------------------------------------
@@ -304,7 +306,7 @@
     
   That means if the value of `flag` is 16, then the conditional jumps depends on comparing the carry flag with 0; if `flag` is 17 then on comparing the carry flag with 1; etc. Interestingly, if the `flag` is 19, then the conditional jumps always take.
   
-  **Gadget entry point calculation:** so the address of the next executed instruction has been calculated using the following simple algorithm:
+  **Next entry point calculation:** the address of the next executed instruction has been calculated using the following algorithm:
   
     1. use the original return address to find the corresponding entry in the return address table,
     2. extract the value of `flag` field, use the table above find the corresponding flag register,
@@ -312,18 +314,44 @@
     4. the next executed address is the value of the field `next return address` of the entry, otherwise
     5. it is the original return address.
   
-### Control flow recovering
+### Static control flow recovering
 
-  The semantics of the dispatcher has been fully disclosed: given an original return address, we can calculate the possible next gadget's entry points. Our objective in reversing the first virtual machine is to reconstruct an equivalent model of execution without the dispatcher, in short, we need to *remove completely the dispatcher out of the control flow graph*. For that purpose, what we lack now is a **static relation** between gadgets. Concretely, we need to know the static control flow between gadgets, or more precisely between gadget's entry points.
+  Our objective in reversing the first virtual machine is to statically reconstruct an [equivalent program](https://researchspace.auckland.ac.nz/bitstream/handle/2292/3504/TR170.pdf) consisting only of opcodes. For that purpose, we need reversing all kind of control flow between opcodes. The virtual machine has a higher execution model (than the real machine). Under its viewpoint, the control flow is from opcode to opcode, it does not take interest in control flow inside an opcode. In our case, this is the *"entry point to entry point"* control flow: the **explicit** one, that is discussed above, is realized by the dispatcher, but there is also an **implicit** one, which happens voluntarily inside gadgets. 
   
-#### Generating all entry points
-
-  We have listed all original return addresses above, each of them is naturally a gadget entry point, but there are more. From the entry point calculating above, we know that the field `next return address` of each entry is also a potential entry point
-  
-#### Gadget memory layout
-  
-  Let's remember that each code gadget terminates by a `call 0x404000`, so the original return address is nothing but the first instruction of the statically next gadget; or in other words, the gadgets are indeed juxtapositional in the memory. Moreover, for each gadget entry point `e`, we know that its address interval is `[lo, hi]` satisfying `lo <= e <= hi`
+  **Gadget memory layout:**
+  each code gadget terminates by a `call 0x404000` to the dispatcher, so the original return address is nothing but the first instruction of the statically next gadget: they are indeed *juxtapositional* in the memory. The first instruction of a gadget is naturally an entry point then.
 
   ![Gadget memory layout](./gadget_layout.svg)
+  
+  In the "next entry point calculation" algorithm, the field `next return address` of each entry is also an entry point. Most of them are indeed natural entry points (i.e. the first addresses of gadgets), but some are not:
+  
+    0x402048 => [0x402000, 0x402053]; 0x402081 => [0x40207f, 0x4020ce]; 0x402096 => [0x40207f, 0x4020ce]; 
+    0x4024ee => [0x4024cd, 0x4024fc]; 0x40256a => [0x40254c, 0x40256d]; 0x402573 => [0x402572, 0x402577]; 
+    0x402673 => [0x40266e, 0x4026c7]; 0x4026a7 => [0x40266e, 0x4026c7]; 0x4026e5 => [0x4026de, 0x4026e5]; 
+    0x402728 => [0x402721, 0x402728]; 0x402759 => [0x402758, 0x40275a]
+  
+#### Control flow
+
+  First, since gadgets are justapositional, if `x` is a (natural or not) entry point of some gadget, and `y` is a natural entry point of the next gadget, then there exists an explicit control flow `x -> y`, it is also *conditional* where the condition is, as mentioned in the algorithm above, `flag % 2` not equal to the corresponding flag register.
+  
+  Second, since there is no control flow instruction in each gadget, if `x`' is a entry point of some gadget, and `y` (if such an entry point exists) is the next entry point of the same gadget, then there exists an implicit control flow `x -> y`, it is  *unconditional*.
+  
+  Third, if `x` is the last entry point of some gadget `X`, and `y` is an entry point of another gadget, so that there is an entry in the return address table satisfying its `return address` field is the natural entry point of the gadget `X + 1` and its `next return address field`, then there exists an implicit control flow `x -> y`, it is *conditional* where the condition is, as mentioned in the algorithm above, `flag % 2` equal to the corresponding flag register.
+  
+  It is direct to prove that all others *"entry point to entry point"* control flow are included in the [transitive closure](https://en.wikipedia.org/wiki/Transitive_closure) of these control flows above.
+  
+##### Interference of transition code
+
+  The conditional flow between entry points is explicitly controlled by the dispatcher, while the first phase and the second phase compute the next executed entry point, the transition code does not, it can generates some effects on the opcodes, so each conditional flow between two entry points `x` and `y` is interfered by the transition code. Most of them are `jmp 0x40428c` (i.e jump to the second phase), and such a transition code can be safely removed from the flow `x -> y`, but some of them are special. They are transition code corresponding with following entries in the return address table (recall that the structure of each entry is `[return address, entry length, flag, transition code address, next return address]`):
+  
+  ![Interference of transition code](./transition_code_cf.svg)
+  
+    [0x402058, 22, 28, 0x402096, 0x404563]; [0x402058, 22, 28, 0x402096, 0x404563]; 
+    [0x402572, 21, 29, 0x402573, 0x4044d6]; [0x402582, 19, 19, 0x40256a, 0x404331]; 
+    [0x4026de, 18, 28, 0x4026e5, 0x40443d]; [0x402721, 18, 29, 0x402728, 0x4043d1]; 
+    [0x402758, 21, 29, 0x402759, 0x40438f]; [0x40275f, 18, 29, 0x402772, 0x4045c4]
+  
+  
+  
   
   
