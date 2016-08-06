@@ -15,7 +15,7 @@
 
   ![Binary analysis with Reven](./reven_basic_gui.png)
 
-  An advantage of Reven is that it **computes** all instructions being executed (instead of running them on real hardware), it is then virtually immune from anti-debugging/anti-instrumenting tricks that might be applied. Symbolically executed instructions come from all executing threads on the system since a *scenario is system-wide*; but we can always filter instructions executed by the examined binary, the result is somehow equivalent with the execution trace.
+  An advantage of Reven is that it **computes** all instructions being executed instead of running them on real hardware, it is then virtually immune (a.k.a until hackers find out bugs :-)) from anti-debugging/anti-instrumenting tricks that might be applied. Symbolically executed instructions come from all executing threads on the system since a *scenario is system-wide*; but we can always filter instructions executed by the examined binary, the result is somehow equivalent with the execution trace.
 
   **Remark:**
   *The approach of Reven is different from debuggers and [dynamic](http://www.dynamorio.org/) [binary](https://software.intel.com/en-us/articles/pin-a-dynamic-binary-instrumentation-tool) [instrumentation](http://valgrind.org/) [tools](http://www.frida.re/) where instructions are still executed on the real hardware, that is still a rich source for [escaping tricks](https://recon.cx/2012/schedule/attachments/42FalconRiva2012.pdf) which exploit [nontransparent effects](https://www.blackhat.com/docs/us-14/materials/us-14-Li-Defeating-The-Transparency-Feature-Of-DBI.pdf) of DBI. Yet, Reven has to pay for this "more transparent" approach, it is slower than DBI tools and debuggers.*
@@ -76,12 +76,12 @@
 
 ### Code virtualization
 
-  The form of control flow graph suggests that it may be a kind of **virtual machine** with [switch-based dispatcher](http://static.usenix.org/event/woot09/tech/full_papers/rolles.pdf). The typical form of such a VM consists of a *dispatcher* located in several basic blocks, but there would exist many "non trivial" basic blocks to which control flow is transferred from a much smaller number of "dispatch points".
+  The form of control flow graph suggests that it may be a **virtual machine** with [switch-based dispatcher](http://static.usenix.org/event/woot09/tech/full_papers/rolles.pdf). The typical form of such a VM consists of a *dispatcher* spreads over several basic blocks; and there exist many *opcode handlers*, each located in a "non trivial" basic block to which control flow is transferred from a much smaller number of "dispatch points".
 
-  These non trivial basic blocks representing opcodes are possibly, for example, ones start with the instruction at `0x402513`, `0x40206a`, `0x4025d`, etc; the control flow transferred to all of them comes from the basic block ends with `0x4042e0`, which may be supposed that this is the *dispatch point* of the dispatcher. Moreover, these basic blocks transfer control flow to the same basic block start with the address `0x404000` (since they both end with `call 0x404000`), which may be supposed that this is the *entry point* of the dispatcher.
+  The basic blocks representing opcode handlers are possibly, for example, ones start with the instruction at `0x402513`, `0x40206a`, `0x4025d`, etc; the control flow transferred to all of them comes from the basic block ends with `0x4042e0`, which may be the *dispatch point* of the dispatcher. Moreover, these basic blocks transfer control flow to the same basic block start with the address `0x404000` (since they both end with `call 0x404000`), which may be supposed that this is the *entry point* of the dispatcher.
 
   **Remark:**
-  *There are basic blocks, for example, at `0x4043a4`, `0x404371`, `0x40428c`, etc. which come from (and reach to) the same address; but they might not represent opcodes since their semantics is trivial, just a simple unconditional`jmp 0x40428`.*
+  *There are basic blocks, for example, at `0x4043a4`, `0x404371`, `0x40428c`, etc. which come from (and reach to) the same address; but they might not opcode handlers since their semantics is trivial: most of them consists of just a simple unconditional`jmp 0x40428`.*
 
 #### Distinguished instruction rate
 
@@ -92,11 +92,11 @@
   **Remark:**
   *Such a form of control flow graph can be observed also in binaries obfuscated by [VMProtect](http://vmpsoft.com/) and some early versions of [Code Virtualizer](http://oreans.com/codevirtualizer.php). In recent versions, Code Virtualizer uses [threaded code](http://home.claranet.nl/users/mhx/ForthBell.pdf): the control flow to the next opcode's basic block will be calculated at the end of the current opcode, then we cannot observe this form. In some ad-hoc VM obfuscated binaries, e.g. [HyperUnpackMe2](http://crackmes.de/users/thehyper/hyperunpackme2/), the dispatcher has even multiple dispatch points (there was a very nice [writeup](http://www.openrce.org/articles/full_view/28) of this binary using IDA).*
   
-  It might be worth noting that the patterns discussed above *just give a hint* to recognize the applied obfuscation technique. Without a serious analysis, we cannot confirm the binary is obfuscated by a VM. Indeed, the same patterns can be observed in programs which are not obfuscated at all, and conversely some program are VM obfuscated but these pattern are not [directly visible](http://www.lancaster.ac.uk/staff/wangz3/publications/trustcom.pdf). Finally, we do not give a formal definition (i.e. a mathematical model on which we can prove something is correct or not) for virtualization obfuscation yet :-). We will come back to this problem in next articles.
+  *The patterns discussed above just give a hint to recognize the applied obfuscation technique. Without a serious analysis, we cannot say that the binary is obfuscated by a VM. Indeed, the same patterns can be observed in programs which are not obfuscated at all, and conversely some program are VM obfuscated but these pattern are not [directly visible](http://www.lancaster.ac.uk/staff/wangz3/publications/trustcom.pdf). Finally, we do not give a formal definition for virtualization obfuscation yet :-). We will come back to this problem in next articles.*
 
 ## Reversing the first virtual machine
 
-  So we have an intuition that there may exist a VM whose entry point of the dispatcher starts with `0x404000`, and single dispatch point ends at `0x4042e0`. We reverse now the dispatcher to understand in details how it works.
+  So we have an intuition that there exists possibly a VM whose entry point of the dispatcher starts with `0x404000`, and single dispatch point ends at `0x4042e0`. We reverse now the dispatcher to understand in details how it works.
 
 ### First phase
 
@@ -346,7 +346,7 @@
   
   ![Interference of transition code](./transition_code_cf.svg)
   
-  (the format of each entry is `[return address, entry length, flag, transition code, next return address]`).
+  (recall that the entry format is `[return address, entry length, flag, transition code, next return address]`).
   
     [0x402058, 22, 28, 0x404563, 0x402096]; [0x402058, 22, 28, 0x404563, 0x402096]; 
     [0x402572, 21, 29, 0x4044d6, 0x402573]; [0x402582, 19, 19, 0x404331, 0x40256a]; 
@@ -354,16 +354,19 @@
     [0x402758, 21, 29, 0x40438f, 0x402759]; [0x40275f, 18, 29, 0x4045c4, 0x402772]
     
   **Remark:**
-  *When coming to this point of reversing the first virtual machine, honestly, we had a big "why" question about its design. We initially thought that the author must be crazy or something like that. Who on the planet want to design such an evil VM where there is implicit control flow inside gadgets?*
+  *When coming to this point of reversing the first virtual machine, honestly, we had a big "why" question about its design. We initially thought that the author must be crazy or something like that :D. Who on earth designed such an evil VM allowing implicit control flow inside gadgets?*
   
   *We tried to guess, such a design allows intra-gadget nontrivial control flow (e.g. a loop). One may notice that this VM has "no table of opcodes" that exists normally in virtual machines, indeed the dispatcher diverts the control flow between entry points using only the table of return address and the unusual effect of the gadget memory layout, each gadget does not correspond to an atomic operation. So this is something like a pseudo-virtual machine, its purpose may be just to hide another thing below.*
   
-  *A gentle "aha!!!" moment is the interference of transition codes, if all of them is just a trivial unconditional jump then that is not worth to design an entry with a field for transition code. Fortunately, they are not, the purpose of such a design might be to allow the author to insert arbitrary noise into the operation of gadgets.*
+  *A gentle "aha!!!" is for the interference of transition codes, if all of them is just a trivial unconditional jump then that is not worth to design an entry with a field for transition code. Fortunately, they are not, the purpose of such a design might be to allow the author to insert arbitrary noise into the operation of gadgets.*
   
 #### Control flow graph
 
-  The control flow between gadget entry points are completely understood, constructing the control flow graph without dispatcher is just a procedural work now. For example, we have used the following algorithm to construct the control flow graph of the first VM.
-  
-  
+  The control flow between gadget entry points are completely understood, constructing the control flow graph without dispatcher is just a procedural work now. For example, we have used the following algorithm to construct the control flow graph: let `ep_0,ep_1,...,ep_n` be the sorted list of all entry points
+    
+    for each pair of consecutive element (ep_i, ep_j)
+    1. if ep_i and ep_j are in the same gadget, then add the unconditional flow (ep_i -> ep_j); else
+    2. ep_j must be a natural entry point, look for its corresponding entry in the return address table,
+    3. add conditional flows (ep_i -> ep_j) and (ep_i -> next return address of the entry).
   
   
