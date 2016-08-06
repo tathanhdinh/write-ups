@@ -2,7 +2,7 @@
 
   We present a code reverse engineering task with our product Reven. The binary examined here is `F4b_XOR_W4kfu`, it is also the challenge of the highest point over all categories (cryptography, exploit, reverse engineering, etc) in the [Grehack 2015's CTF](https://grehack.fr/2015/ctf). The binary is heavily obfuscated, but the obfuscation techniques implemented are novel and interesting.
 
-  This is the first article of a series where we introduce our ongoing work in developing an *automated code deobfuscation* system using the *symbolic execution* framework of REVEN. Since our approach is **operational** (i.e. we require some information about how the obfuscation techniques are implemented) this article presents technical details that we discovered in reversing `F4b_XOR_W4kfu`.
+  This is the first article of a series where we introduce our ongoing work in developing an *automated code deobfuscation* system using the *symbolic execution* framework of REVEN. Since our approach is **operational** (i.e. we require some information about how the obfuscation techniques are implemented) this article presents technical details that we discovered in reversing `F4b_XOR_W4kfu`. This is a quite verbose text :-), and we apologize if it makes annoyed. We try our best to explicate not only "how" the challenge works without skipping any detail, but also sometime "why" it works that way, we believe that such a question might be more important, but it is omitted in most of writeups. 
 
   **Remark:**
   *To the our best knowledge, most approaches in binary code deobfuscation are operational, fully denotational approaches work in very strict cases only. As a direct consequence of [Rice's theorem](https://en.wikipedia.org/wiki/Rice%27stheorem), learning general programs simply from input/output relation is a well-known undecidable problem. Even for much more restricted contexts, static analysis is [proven to be NP-hard](http://citeseerx.ist.psu.edu/viewdoc/summary?doi=10.1.1.35.2337) for [smartly](https://www.cs.ucsb.edu/~chris/research/doc/acsac07limits.pdf) [obfuscated](http://llvm.org/pubs/2008-02-ImpedingMalwareAnalysis.pdf) programs. Recent [semantics-based](https://www.cs.arizona.edu/people/debray/Publications/ccs-unvirtualize.pdf) approaches are intrinsically [operational](http://static.usenix.org/event/woot09/tech/full_papers/rolles.pdf); though [some](https://cs.arizona.edu/~debray/Publications/ccs2015-symbolic.pdf) are considered [generic](https://www.cs.arizona.edu/people/debray/Publications/generic-deobf.pdf), they work only on simple cases of very specific obfuscation techniques. However, special classes of loop-free programs can be efficiently [synthesized](http://people.eecs.berkeley.edu/~sseshia/pubdir/synth-icse10.pdf) from input/output with helps of SMT solvers.*
@@ -235,7 +235,7 @@
     0x402772 => [0x402772, 0x402774]; 0x402779 => [0x402779, 0x40277b]
     
   **Remark:** 
-  *one uses IDA Pro can use the following Python script to decrypt the binary, when synchronizing the IDA's view with Reven (using qb-sync plugin), then get a familiar effect of debugging a program but without caring that it is encrypted B-)*
+  *one uses IDA can use the following Python script to decrypt the binary, when synchronizing the IDA's view with Reven (using qb-sync plugin), then get a familiar effect of debugging a program but without caring that it is encrypted B-)*
   
     def decrypt_interval(lo_addr, hi_addr):
 	  print 'decrypting opcode from 0x{0:x} to 0x{1:x}'.format(lo_addr, hi_addr)
@@ -318,8 +318,8 @@
 
   Our objective in reversing the first virtual machine is to statically reconstruct an [equivalent program](https://researchspace.auckland.ac.nz/bitstream/handle/2292/3504/TR170.pdf) consisting only of opcodes. For that purpose, we need reversing all kind of control flow between opcodes. The virtual machine has a higher execution model (than the real machine). Under its viewpoint, the control flow is from opcode to opcode, it does not take interest in control flow inside an opcode. In our case, this is the *"entry point to entry point"* control flow: the **explicit** one, that is discussed above, is realized by the dispatcher, but there is also an **implicit** one, which happens voluntarily inside gadgets. 
   
-  **Gadget memory layout:**
-  each code gadget terminates by a `call 0x404000` to the dispatcher, so the original return address is nothing but the first instruction of the statically next gadget: they are indeed *juxtapositional* in the memory. The first instruction of a gadget is naturally an entry point then.
+#### Gadget memory layout
+  Each code gadget terminates by a `call 0x404000` to the dispatcher, so the original return address is nothing but the first instruction of the statically next gadget: they are indeed *juxtapositional* in the memory. The first instruction of a gadget is naturally an entry point then.
 
   ![Gadget memory layout](./gadget_layout.svg)
   
@@ -330,7 +330,7 @@
     0x402673 => [0x40266e, 0x4026c7]; 0x4026a7 => [0x40266e, 0x4026c7]; 0x4026e5 => [0x4026de, 0x4026e5]; 
     0x402728 => [0x402721, 0x402728]; 0x402759 => [0x402758, 0x40275a]
   
-#### Control flow
+#### Control flow between entry points
 
   First, since gadgets are justapositional, if `x` is a (natural or not) entry point of some gadget, and `y` is a natural entry point of the next gadget, then there exists an explicit control flow `x -> y`, it is also *conditional* where the condition is, as mentioned in the algorithm above, `flag % 2` not equal to the corresponding flag register.
   
@@ -340,17 +340,29 @@
   
   It is direct to prove that all others *"entry point to entry point"* control flow are included in the [transitive closure](https://en.wikipedia.org/wiki/Transitive_closure) of these control flows above.
   
-##### Interference of transition code
+#### Interference of transition code
 
-  The conditional flow between entry points is explicitly controlled by the dispatcher, while the first phase and the second phase compute the next executed entry point, the transition code does not, it can generates some effects on the opcodes, so each conditional flow between two entry points `x` and `y` is interfered by the transition code. Most of them are `jmp 0x40428c` (i.e jump to the second phase), and such a transition code can be safely removed from the flow `x -> y`, but some of them are special. They are transition code corresponding with following entries in the return address table (recall that the structure of each entry is `[return address, entry length, flag, transition code address, next return address]`):
+  The conditional flow between entry points is explicitly controlled by the dispatcher, while the first phase and the second phase compute the next executed entry point, the transition code does not, it can generate some effects on the opcodes, so each conditional flow between two entry points `x` and `y` is interfered by the transition code. Most of them are `jmp 0x40428c` (i.e jump to the second phase), and such a transition code can be safely removed from the flow `x -> y`, but some of them are special. They correspond with following entries in the return address table:
   
   ![Interference of transition code](./transition_code_cf.svg)
   
-    [0x402058, 22, 28, 0x402096, 0x404563]; [0x402058, 22, 28, 0x402096, 0x404563]; 
-    [0x402572, 21, 29, 0x402573, 0x4044d6]; [0x402582, 19, 19, 0x40256a, 0x404331]; 
-    [0x4026de, 18, 28, 0x4026e5, 0x40443d]; [0x402721, 18, 29, 0x402728, 0x4043d1]; 
-    [0x402758, 21, 29, 0x402759, 0x40438f]; [0x40275f, 18, 29, 0x402772, 0x4045c4]
+  (the format of each entry is `[return address, entry length, flag, transition code, next return address]`).
   
+    [0x402058, 22, 28, 0x404563, 0x402096]; [0x402058, 22, 28, 0x404563, 0x402096]; 
+    [0x402572, 21, 29, 0x4044d6, 0x402573]; [0x402582, 19, 19, 0x404331, 0x40256a]; 
+    [0x4026de, 18, 28, 0x40443d, 0x4026e5]; [0x402721, 18, 29, 0x4043d1, 0x402728]; 
+    [0x402758, 21, 29, 0x40438f, 0x402759]; [0x40275f, 18, 29, 0x4045c4, 0x402772]
+    
+  **Remark:**
+  *When coming to this point of reversing the first virtual machine, honestly, we had a big "why" question about its design. We initially thought that the author must be crazy or something like that. Who on the planet want to design such an evil VM where there is implicit control flow inside gadgets?*
+  
+  *We tried to guess, such a design allows intra-gadget nontrivial control flow (e.g. a loop). One may notice that this VM has "no table of opcodes" that exists normally in virtual machines, indeed the dispatcher diverts the control flow between entry points using only the table of return address and the unusual effect of the gadget memory layout, each gadget does not correspond to an atomic operation. So this is something like a pseudo-virtual machine, its purpose may be just to hide another thing below.*
+  
+  *A gentle "aha!!!" moment is the interference of transition codes, if all of them is just a trivial unconditional jump then that is not worth to design an entry with a field for transition code. Fortunately, they are not, the purpose of such a design might be to allow the author to insert arbitrary noise into the operation of gadgets.*
+  
+#### Control flow graph
+
+  The control flow between gadget entry points are completely understood, constructing the control flow graph without dispatcher is just a procedural work now. For example, we have used the following algorithm to construct the control flow graph of the first VM.
   
   
   
