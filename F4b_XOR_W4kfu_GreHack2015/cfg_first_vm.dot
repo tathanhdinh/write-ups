@@ -1,24 +1,31 @@
 digraph G {
   0 [
-   shape=box, style=rounded,
-   label="0x402759  dec ecx\l", fontname="Inconsolata",
-   fontsize=10.0
-   ];
+     shape=box, style=rounded,
+     label="0x402759  dec ecx\l", fontname="Inconsolata",
+     fontsize=10.0
+     ];
   1 [
-   shape=box, style=rounded,
-   label="0x40275f  shl  edx, 1\l", fontname="Inconsolata",
-   fontsize=10.0
-   ];
+     shape=box, style=rounded,
+     label="0x40275f  shl  edx, 1\l", fontname="Inconsolata",
+     fontsize=10.0
+     ];
   2 [
-   shape=box, style=rounded, label="0x402758  inc  edx\l",
-   fontname="Inconsolata", fontsize=10.0
-   ];
-//3 [shape=box, style=rounded, label="0x402750  nop\l0x402751  nop\l0x402752  nop\l", fontname="Inconsolata", fontsize=10.0];
-4 [shape=box, style=rounded, label="0x402721  mov word ptr 0x403042, si\l", fontname="Inconsolata", fontsize=10.0];
-//5 [shape=box, style=rounded, label="0x402728"];
-6 [shape=box, style="rounded,filled", fillcolor=violet, label="opcode: 00|esi:16|000
-0x40270f  movzx  edx, byte ptr 0x403ca7\l0x402716  add  edx, 0x403654\l", fontname="Inconsolata", fontsize=10.0];
-7 [shape=box, style=rounded, label="0x4026de  mov word ptr 0x403042, si\l", fontname="Inconsolata", fontsize=10.0];
+     shape=box, style=rounded, label="0x402758  inc  edx\l",
+     fontname="Inconsolata", fontsize=10.0
+     ];
+  // 3 [shape=box, style=rounded, label="0x402750  nop\l0x402751  nop\l0x402752  nop\l", fontname="Inconsolata", fontsize=10.0];
+  4 [
+     shape=box, style=rounded,
+     label="0x402721  mov word ptr 0x403042, si\l",
+     fontname="Inconsolata", fontsize=10.0
+     ];
+  // 5 [shape=box, style=rounded, label="0x402728"];
+  6 [
+     shape=box, style="rounded,filled", fillcolor=violet,
+     label="0x40270f  movzx  edx, byte ptr 0x403ca7\l0x402716  add  edx, 0x403654\l",
+     fontname="Inconsolata", fontsize=10.0];
+  7 [
+     shape=box, style=rounded, label="0x4026de  mov word ptr 0x403042, si\l", fontname="Inconsolata", fontsize=10.0];
 //8 [shape=box, style=rounded, label="0x4026e5  not  cl\l0x402660  add  cl, 0x21\l0x402663  shl  ebx, cl\l0x402665  or  eax, ebx\l0x402667  mov  [esi], eax\l", fontname="Inconsolata", fontsize=10.0];
 9 [shape=box, style="rounded,filled", fillcolor=violet, label="opcode: 00|esi:16|001
 0x4026cc  movzx  edx, byte ptr 0x403ca7\l0x4026d3  add  edx, 0x403654\l", fontname="Inconsolata", fontsize=10.0];

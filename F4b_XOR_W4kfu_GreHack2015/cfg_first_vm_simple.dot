@@ -1,0 +1,430 @@
+digraph G {
+  0 [
+     shape=box, style=rounded,
+     label="0x402759  dec ecx\l", fontname="Inconsolata",
+     fontsize=10.0
+     ];
+  1 [
+     shape=box, style=rounded,
+     label="0x40275f  shl  edx, 1\l", fontname="Inconsolata",
+     fontsize=10.0
+     ];
+  2 [
+     shape=box, style=rounded, label="0x402758  inc  edx\l",
+     fontname="Inconsolata",
+     fontsize=10.0
+     ];
+  
+  4 [
+     shape=box, style=rounded,
+     label="0x402721  mov word ptr 0x403042, si\l",
+     fontname="Inconsolata",
+     fontsize=10.0
+     ];
+  6 [
+     shape=box, style=rounded,
+     label="0x40270f  movzx  edx, byte ptr 0x403ca7\l0x402716  add  edx, 0x403654\l",
+     fontname="Inconsolata",
+     fontsize=10.0];
+  7 [
+     shape=box, style=rounded,
+     label="0x4026de  mov word ptr 0x403042, si\l",
+     fontname="Inconsolata", fontsize=10.0];
+  9 [
+     shape=box, style=rounded,
+     label="0x4026cc  movzx  edx, byte ptr 0x403ca7\l0x4026d3  add  edx, 0x403654\l",
+     fontname="Inconsolata", fontsize=10.0
+     ];
+  10 [
+      shape=box, style=rounded,
+      label="0x4025df  sub  word ptr 0x403042, 0x15\l0x4025e7  add  esi, 0x403732\l0x4025ed  cmp  byte ptr [esi], 0xff\l",
+      fontname="Inconsolata", fontsize=10.0];
+  11 [
+      shape=box, style=rounded,
+      label="0x4025f6  add  word ptr 0x403042, 0x15\l0x4025fe  mov  al, byte ptr 0x403ca7\l0x402603  mov  byte ptr [esi], al\l",
+      fontname="Inconsolata", fontsize=10.0
+      ];
+  12 [
+      shape=box, style=rounded,
+      label="0x4025b4  sub  word ptr 0x403042, 0x15\l0x4025bc  mov  al, byte ptr 0x403ca7\l0x4025c1  add  esi, 0x403732\l0x4025c7  cmp  [esi], al\l",
+      fontname="Inconsolata", fontsize=10.0
+      ];
+  13 [
+      shape=box, style=rounded,
+      label="0x4025cf  add  word ptr 0x403042, 0x15\l0x4025d7  mov  byte ptr [esi], 0xff\l",
+      fontname="Inconsolata", fontsize=10.0
+      ];
+  14 [
+      shape=box, style=rounded,
+      label="0x402573  dec  ecx\l0x402574  test  ecx, ecx\l",
+      fontname="Inconsolata", fontsize=10.0
+      ];
+  16 [
+      shape=box, style=rounded, label="0x402572  inc edi\l",
+      fontname="Inconsolata", fontsize=10.0];
+  18 [
+      shape=box, style=rounded,
+      label="0x40254c  movzx  edx, byte ptr 0x403ca7\l0x402553  shl  edx, 5\l0x402556  shl  eax, 2\l0x402559  add  edx, 0x403ca8\l0x40255f  add  eax, edx\l0x402561  mov  esi, [eax]\l0x402563  mov  ecx, 0x20\l0x402568  xor  edi, edi\l",
+      fontname="Inconsolata", fontsize=10.0];
+  19 [
+      shape=box, style=rounded,
+      label="0x402501  test  ebx, 1\l", fontname="Inconsolata", fontsize=10.0
+      ];
+  20 [
+      shape=box, style=rounded,
+      label="0x40250d  inc edx\l", fontname="Inconsolata", fontsize=10.0
+      ];
+  21 [
+      shape=box, style=rounded,
+      label="0x4024ee  mov  eax, [esi]\l0x4024f0  mov  ebx, [edi]\l0x4024f2  shr  eax, cl\l0x4024f4  shr  ebx, cl\l0x4024f6  test  eax, 1\l",
+      fontname="Inconsolata", fontsize=10.0
+      ];
+  22 [
+      shape=box, style=rounded,
+      label="0x4024cd  movzx  edx, byte ptr 0x403ca7\l0x4024d4  shl  edx, 5\l0x4024d7  add  edx, 0x403ca8\l0x4024dd  shl  esi, 2\l0x4024e0  add  esi, edx\l0x4024e2  shl  edi, 2\l0x4024e5  add  edi, edx\l0x4024e7  mov  ecx, 0x1f\l0x4024ec  xor  edx, edx\l",
+      fontname="Inconsolata", fontsize=10.0
+      ];
+  23 [
+      shape=box, style=rounded,
+      label="0x402486  movzx  eax, byte ptr 0x403ca7\l0x40248d  shl  eax, 2\l0x402490  mov  ebx, dword ptr [eax+0x40268b]\l0x402496  mov  ax, word ptr 0x403042\l0x40249c  xor  edx, edx\l0x40249e  mov  ecx, 8\l0x4024a3  div  ecx\l0x4024a5  add  ebx, eax\l0x4024a7  mov  ebx, [ebx]\l0x4024a9  bswap  ebx\l0x4024ab  mov  cl, dl\l0x4024ad  shl  ebx, cl ; opcode\l0x4024af  add  word ptr 0x403042, 4\l0x4024b7  mov  eax, ebx\l0x4024b9  shr  eax, 0x1d\l0x4024bc  test  ebx, 0x10000000\l",
+      fontname="Inconsolata", fontsize=10.0
+      ];
+  25 [
+      shape=box, style=rounded,
+      label="0x402445  sub  word ptr 0x403042, 0xb\l0x40244d  shl  esi, 5\l0x402450  add  esi, 0x403832\l0x402456  mov  eax, [esi]\l0x402458  cmp  edi, eax\l",
+      fontname="Inconsolata", fontsize=10.0];
+  26 [
+      shape=box, style=rounded,
+      label="0x402460  add  dword ptr 0x403042, 0xb\l0x402468  inc  edi\l0x402469  shl  edi, 2\l0x40246c  add  edi, esi\l0x40246e  mov  edi, [edi]\l0x402470  movzx  eax, byte ptr 0x403ca7\l0x402477  shl  eax, 5\l0x40247a  add  eax, 0x403ca8\l0x40247f  mov  [eax], edi\l",
+      fontname="Inconsolata", fontsize=10.0];
+  27 [
+      shape=box, style=rounded,
+      label="0x402434  test  ebx, 0x1000000\l",
+      fontname="Inconsolata", fontsize=10.0];
+  29 [
+      shape=box, style=rounded,
+      label="0x402428  test  ebx, 0x2000000\l",
+      fontname="Inconsolata", fontsize=10.0];
+  30 [
+      shape=box, style=rounded,
+      label="0x4023de  movzx  eax, byte ptr 0x403ca7\l0x4023e5  shl  eax, 2\l0x4023e8  mov  ebx, dword ptr [eax+0x40268b]\l0x4023ee  mov  ax, word ptr 0x403042\l0x4023f4  xor  edx, edx\l0x4023f6  mov ecx, 8\l0x4023fb  div ecx\l0x4023fd  add ebx, eax\l0x4023ff  mov  ebx, [ebx]\l0x402401  bswap  ebx\l0x402403  mov  cl, dl\l0x402405  shl  ebx, cl ; opcode\l0x402407  add  word ptr 0x403042, 8\l0x40240f  mov  esi, ebx\l0x402411  mov  edi, ebx\l0x402413  shr  esi, 0x1d\l0x402416  shr  edi, 0x1a\l0x402419  and  edi, 7\l0x40241c  test  ebx, 0x3000000\l",
+      fontname="Inconsolata", fontsize=10.0
+      ];
+  31 [
+      shape=box, style=rounded,
+      label="0x40236a  jmp +2\l0x40236c  mov  ecx, 1\l0x402371  mov  edx, 0\l0x402376  mov  eax, 6\l0x40237b  shl  eax, 5\l0x40237e  add  eax, 0x403832\l0x402383  add  eax, 4\l0x402386  cmp  dword ptr [eax], 0x73ae5f50\l0x40238c  cmovnz  ecx, edx\l0x40238f  add  eax, 4\l0x402392  cmp  dword ptr [eax], 0xbd2b6a91\l0x402398  cmovnz  ecx, edx\l0x40239b  add  eax, 4\l0x40239e  cmp  dword ptr [eax], 0x3e4e9687\l0x4023a4  cmovnz  ecx, edx\l0x4023a7  add  eax, 4\l0x4023aa  cmp  dword ptr [eax], 0xbcfaadcc\l0x4023b0  cmovnz  ecx, edx\l0x4023b3  add  eax, 4\l0x4023b6  cmp  dword ptr [eax], 0xcd2ca810\l0x4023bc  cmovnz  ecx, edx\l0x4023bf  add  eax, 4\l0x4023c2  cmp  dword ptr [eax], 0x9d26237e\l0x4023c8  cmovnz  ecx, edx\l0x4023cb  cmp  ecx, 1\l",
+      fontname="Inconsolata", fontsize=10.0
+      ];
+  32 [
+      shape=box, style=rounded,
+      label="0x4023d4  mov  ecx, 0x403ca3
+      (Yes!)"
+      ];
+  33 [
+      shape=box, style=rounded,
+      label="0x40235e  test  ebx, 0x6000\l",
+      fontname="Inconsolata", fontsize=10.0
+      ];
+  34 [
+      shape=box, style=rounded,
+      label="0x402352  test  ebx, 0x8000\l", fontname="Inconsolata",
+      fontsize=10.0
+      ];
+  35 [
+      shape=box, style=rounded,
+      label="0x402346  test  ebx, 0xa000\l",
+      fontname="Inconsolata", fontsize=10.0
+      ];
+  36 [
+      shape=box, style=rounded, label="0x40233a  test  ebx, 0xc000\l",
+      fontname="Inconsolata", fontsize=10.0
+      ];
+  37 [
+      shape=box, style=rounded,
+      label="0x4022f8  movzx  eax, byte ptr 0x403ca7\l0x4022ff  shl  eax, 2\l0x402302  mov  ebx, [eax+0x40268b]\l0x402308  mov  ax, word ptr 0x403042\l0x40230e  xor  edx, edx\l0x402310  mov  ecx, 8\l0x402315  div  ecx\l0x402317  add  ebx, eax\l0x402319  mov  ebx, [ebx]\l0x40231b  bswap  ebx\l0x40231d  mov  cl, dl\l0x40231f  shl  ebx, cl ; opcode\l0x402321  add  word ptr 0x403042, 0x13\l0x402329  mov  esi, ebx\l0x40232b  shr  esi, 0x10\l0x40232e  test  ebx, 0xe000\l",
+      fontname="Inconsolata", fontsize=10.0
+      ];
+  38 [
+      shape=box, style=rounded,
+      label="0x40227f  movzx  eax, byte ptr 0x403ca7\l0x402286  shl  eax, 2\l0x402289  mov  ebx, [eax+0x40268b]\l0x40228f  mov  ax, word ptr 0x403042\l0x402295  xor  edx, edx\l0x402297  mov  ecx, 8\l0x40229c  div  ecx\l0x40229e  add  ebx, eax\l0x4022a0  mov  ebx, [ebx]\l0x4022a2  bswap  ebx\l0x4022a4  mov  cl, dl\l0x4022a6  shl  ebx, cl ; opcode\l0x4022a8  sub  word ptr 0x403042, 0xa ; restore continuation\l0x4022b0  shr  ebx, 0x10\l0x4022b3  mov  edx, ebx\l0x4022b5  add  edx, 0x403732\l0x4022bb  mov  dl, [edx]\l0x4022bd  cmp  dl, byte ptr 0x403ca7\l",
+      fontname="Inconsolata", fontsize=10.0
+      ];
+  39 [
+      shape=box, style=rounded,
+      label="0x4022c9  add  word ptr 0x403042, 0x1a\l0x4022d1  shl  ebx, 2\l0x4022d4  add  ebx, 0x403198 ; password buffer\l0x4022da  movzx  edx, byte ptr 0x403ca7\l0x4022e1  shl  edx, 5\l0x4022e4  add  edx, 0x403ca8\l0x4022ea  shl  edi, 2\l0x4022ed  add  edx, edi\l0x4022ef  mov  edx, [edx]\l0x4022f1  mov  [ebx], edx\l",
+      fontname="Inconsolata", fontsize=10.0
+      ];
+  40 [
+      shape=box, style=rounded,
+      label="0x402206  movzx  eax, byte ptr 0x403ca7\l0x40220d  shl  eax, 2\l0x402210  mov  ebx, [eax+0x40268b]\l0x402216  mov  ax, 0x403042\l0x40221c  xor  edx, edx\l0x40221e  mov  ecx, 8\l0x402223  div  ecx\l0x402225  add  ebx, eax\l0x402227  mov  ebx, [ebx]\l0x402229  bswap  ebx\l0x40222b  mov  cl, dl\l0x40222d  shl  ebx, cl ; opcode\l0x40222f  sub  word ptr 0x403042, 0xa ; restore continuation\l0x402237  shr  ebx, 0x10\l0x40223a  mov  edx, ebx\l0x40223c  add  edx, 0x403732\l0x402242  mov  dl, [edx]\l0x402244  cmp  dl, byte ptr 0x403ca7\l",
+      fontname="Inconsolata", fontsize=10.0
+      ];
+  41 [
+      shape=box, style=rounded,
+      label="0x402250  add  word ptr 0x403042, 0x1a\l0x402258  shl  ebx, 2\l0x40225b  add  ebx, 0x403198 ; password buffer\l0x402261  mov  ebx, [ebx]\l0x402263  movzx  edx, byte ptr 0x403ca7\l0x40226a  shl  edx, 5\l0x40226d  add  edx, 0x403ca8\l0x402273  shl  esi, 2\l0x402276  add  edx, esi\l0x402278  mov  [edx], ebx\l",
+      fontname="Inconsolata", fontsize=10.0
+      ];
+  42 [
+      shape=box, style=rounded,
+      label="0x4021f5  test  ebx, 0x1000000",
+      fontname="Inconsolata", fontsize=10.0
+      ];
+  44 [
+      shape=box, style=rounded,
+      label="0x4021e9  test  ebx, 0x1800000\l",
+      fontname="Inconsolata", fontsize=10.0
+      ];
+  45 [
+      shape=box, style=rounded,
+      label="0x4021dd  test  ebx, 0x2000000\l",
+      fontname="Inconsolata", fontsize=10.0
+      ];
+  46 [
+      shape=box, style=rounded,
+      label="0x4021d1  test  ebx, 0x2800000\l",
+      fontname="Inconsolata", fontsize=10.0
+      ];
+  47 [
+      shape=box, style=rounded,
+      label="0x4021c5  test  ebx, 0x3000000\l",
+      fontname="Inconsolata", fontsize=10.0
+      ];
+  48 [
+      shape=box, style=rounded,
+      label="0x40217b  movzx  eax, byte ptr 0x403ca7\l0x402182  shl  eax, 2\l0x402185  mov  ebx, dword ptr [eax+0x40268b]\l0x40218b  mov  ax, word ptr 0x403042\l0x402191  xor  edx, edx\l0x402193  mov  ecx, 8\l0x402198  div  ecx\l0x40219a  add  ebx, eax\l0x40219c  mov  ebx, [ebx]\l0x40219e  bswap  ebx\l0x4021a0  mov  cl, dl\l0x4021a2  shl  ebx, cl ; opcode\l0x4021a4  add  word ptr 0x403042, 9\l0x4021ac  mov  esi, ebx\l0x4021ae  mov  edi, ebx\l0x4021b0  shr  esi, 0x1d\l0x4021b3  shr  edi, 0x1a\l0x4021b6  and  edi, 7\l0x4021b9  test  ebx, 0x3800000\l",
+      fontname="Inconsolata", fontsize=10.0
+      ];
+  49 [
+      shape=box, style=rounded,
+      label="0x4020df  test  ebx, 0x40000000\l",
+      fontname="Inconsolata", fontsize=10.0
+      ];
+  51 [
+      shape=box, style=rounded,
+      label="0x4020d3  test  ebx, 0x80000000\l",
+      fontname="Inconsolata", fontsize=10.0
+      ];
+  52 [
+      shape=box, style=rounded,
+      label="0x402096  movzx  eax, byte ptr 0x403ca7\l0x40209d  shl  eax, 2\l0x4020a0  mov  ebx, dword ptr [eax+0x40326b]\l0x4020a6  mov  ax, word ptr 0x403042\l0x4020ac  xor  edx, edx\l0x4020ae  mov  ecx, 8\l0x4020b3  div  ecx\l0x4020b5  add  ebx, eax\l0x4020b7  mov  ebx, [ebx]\l0x4020b9  bswap  ebx\l0x4020bb  mov  cl, dl\l0x4020bd  shl  ebx, cl ; opcode\l0x4020bf  add  word ptr 0x403042, 2\l0x4020c7  test  ebx, 0xc0000000\l",
+      fontname="Inconsolata", fontsize=10.0
+      ];
+  53 [
+      shape=box, style=rounded,
+      label="0x402081  mov  byte ptr 0x403ca7, al\l0x402086  shl  eax, 1\l0x402088  mov  bx, word ptr [eax+0x403048]\l0x40208f  mov  word ptr 0x403042, bx\l",
+      fontname="Inconsolata", fontsize=10.0
+      ];
+  54 [
+      shape=box, style=rounded,
+      label="0x40207f  xor  al, al\l",
+      fontname="Inconsolata", fontsize=10.0];
+  55 [
+      shape=box, style=rounded,
+      label="0x402058  xor  eax, eax\l0x40205a  mov  byte ptr 0x403041, al\l0x40205f  movzx  eax, byte ptr 0x403ca7\l0x402066  mov  bx, word ptr 0x403042\l0x40206d  movzx  ecx, al\l0x402070  shl  cl, 1\l0x402072  mov  word ptr [ecx+0x403048], bx\l",
+      fontname="Inconsolata",
+      fontsize=10.0
+      ];
+  56 [
+      shape=box, style="filled,rounded",
+      fillcolor=cornflowerblue,
+      label="0x402048  mov  al, byte ptr 0x403041\l0x40204d  inc  al\l0x40204f  nop\l0x402050  nop\l0x402051  nop\l0x402052  nop\l",
+      fontname="Inconsolata", fontsize=10.0
+      ];
+  57 [
+      shape=box, style=rounded,
+      label="0x402779  mov  dword ptr [eax], edi\l",
+      fontname="Inconsolata", fontsize=10.0];
+  58 [
+      shape=box, style=rounded,
+      label="0x402772  mov  dword ptr [esi], edx\l",
+      fontname="Inconsolata", fontsize=10.0
+      ];
+  59 [
+      shape=box, style=rounded,
+      label="0x402766  mov  word ptr 0x403042, si\l",
+      fontname="Inconsolata", fontsize=10.0];
+  60 [
+      shape=box, style=rounded,
+      label="0x40272d  movzx  edx, byte ptr 0x403ca7\l0x402734  shl  edx, 5\l0x402737  add  edx, 0x403ca8\l0x40273d  shl  esi, 2\l0x402740  shl  edi, 2\l0x402743  add  edi, edx\l0x402745  mov  edi, [edi]\l0x402747  add  esi, edx\l0x402749  mov  [esi], edi\l",
+      fontname="Inconsolata", fontsize=10.0
+      ];
+  61 [
+      shape=box, style=rounded,
+      label="0x4026ea  movzx  edx, byte ptr 0x403ca7\l0x4026f1  shl  edx, 5\l0x4026f4  add  edx, 0x403ca8\l0x4026fa  shl  esi, 2\l0x4026fd  add  esi, edx\l0x4026ff  shl  edi, 2\l0x402702  add  edi, edx\l0x402704  mov  eax, [esi]\l0x402706  add  eax, [edi]\l0x402708  mov [esi], eax\l",
+      fontname="Inconsolata", fontsize=10.0
+      ];
+  62 [
+      shape=box, style=rounded,
+      label="0x4026a7  movzx  edx, byte ptr 0x403ca7\l0x4026ae  shl  edx, 5\l0x4026b1  add  edx, 0x403ca8\l0x4026b7  shl  esi, 2\l0x4026ba  add  esi, edx\l0x4026bc  shl  edi, 2\l0x4026bf  add  edi, edx\l0x4026c1  mov  eax, [esi]\l0x4026c3  sub  eax, [edi]\l0x4026C5  mov  [esi], eax\l",
+      fontname="Inconsolata", fontsize=10.0
+      ];
+  63 [
+      shape=box, style=rounded,
+      label="0x40263c  movzx  edx, byte ptr 0x403ca7\l0x402643  shl  edx, 5\l0x402646  add  edx, 0x403ca8\l0x40264c  shl  esi, 2\l0x40264f  add  esi, edx\l0x402651  shl  edi, 2\l0x402654  add  edi, edx\l0x402656  mov  eax, [esi]\l0x402658  mov  ecx, [edi]\l0x40265a  mov  ebx, eax\l0x40265c  shr  eax, cl\l0x40265e  not  cl\l0x402660  add  cl, 0x21\l0x402663  shl  ebx, cl\l0x402665  or  eax, ebx\l0x402667  mov  [esi], eax\l",
+      fontname="Inconsolata", fontsize=10.0
+      ];
+  64 [
+      shape=box, style=rounded,
+      label="0x40260a  movzx  edx, byte ptr 0x403ca7\l0x402611  shl  edx, 5\l0x402614  add  edx, 0x403ca8\l0x40261a  shl  esi, 2\l0x40261d  add  esi, edx\l0x40261f  shl  edi, 2\l0x402622  add  edi, edx\l0x402624  mov  eax, [esi]\l0x402626  mov  ecx, [edi]\l0x402628  mov  ebx, eax\l0x40262a  shl  eax, cl\l0x40262c  not  cl\l0x40262e  add  cl, 0x21\l0x402631  shr  ebx, cl\l0x402633  or  eax, ebx\l0x402635  mov  [esi], eax\l",
+      fontname="Inconsolata", fontsize=10.0
+      ];
+  65 [
+      shape=box, style=rounded,
+      label="0x402582  movzx  ebx, byte ptr 0x403ca7\l0x402589  shl  ebx, 5\l0x40258c  mov  ecx, ebx\l0x40258e  add  ecx, 0x403ca8\l0x402594  shl  eax, 2\l0x402597  add  ecx, eax\l0x402599  mov  eax, [ecx]\l0x40259b  add  ebx, 0x403832\l0x4025a1  mov  ecx, [ebx]\l0x4025a3  inc  ecx\l0x4025a4  mov  edx, ecx\l0x4025a6  shl  edx, 2\l0x4025a9  add  edx, ebx\l0x4025ab  mov  [edx], eax\l0x4025ad  mov  [ebx], ecx\l",
+      fontname="Inconsolata", fontsize=10.0
+      ];
+  66 [
+      shape=box, style=rounded,
+      label="0x402513  movzx  edx, byte ptr 0x403ca7\l0x40251a  shl  edx, 5\l0x40251d  add  edx, 0x403ca8\l0x402523  shl  esi, 2\l0x402526  add  esi, edx\l0x402528  shl  edi, 2\l0x40252b  add  edi, edx\l0x40252d  mov  eax, [esi]\l0x40252f  cmp  eax, [edi]\l0x402531  lahf\l0x402532  shr  eax, 0xe\l0x402535  and  eax, 1\l0x402538  movzx  edx, byte ptr 0x403ca7\l0x40253f  add   edx, 0x403654\l0x402545  mov  [edx], al\l",
+      fontname="Inconsolata", fontsize=10.0
+      ];
+  67 [
+      shape=box, style=rounded,
+      label="0x4020f0  movzx  eax, byte ptr 0x403ca7\l0x4020f7  shl  eax, 2\l0x4020fa  mov  ebx, dword ptr [eax+0x40268b]\l0x402106  xor  edx, edx\l0x402108  mov  ecx, 8\l0x40210d  div  ecx\l0x40210f  add  ebx, eax\l0x402111  mov  ebx, [ebx]\l0x402113  bswap  ebx\l0x402115  mov  cl, dl\l0x402117  shl  ebx, cl ; opcode\l0x402119  add  word ptr 0x403042, 0x10\l0x402121  and  ebx, 0xffff0000\l0x402127  mov  edi, ebx\l0x402129  movzx  eax, byte ptr 0x403ca7\l0x402130  shl  eax, 2\l0x402133  mov  ebx, dword ptr [eax+0x40268b]\l0x402139  mov  ax, dword ptr 0x403042\l0x40213f  xor  edx, edx\l0x402141  mov  ecx, 8\l0x402146  div  ecx\l0x402148  add  ebx, eax\l0x40214a  mov  ebx, [ebx]\l0x40214c  bswap  ebx\l0x40214e  mov  cl, dl\l0x402150  shl  ebx, cl ; opcode\l0x402152  add  word ptr 0x403042, 0x10\l0x40215a  shr  ebx, 0x10\l0x40215d  or  edi, ebx\l0x40215f  movzx  edx, byte ptr 0x403ca7\l0x402166  shl  edx, 5\l0x402169  add  edx, 0x403ca8\l0x40216f  shl  esi, 2\l0x402172  add  esi, edx\l0x402174  mov  [esi], edi\l",
+      fontname="Inconsolata", fontsize=10.0];
+  69 [
+      shape=box,
+      style="filled,rounded",
+      fillcolor="gainsboro", label="0x40266e  mov  ecx, 0x403044
+      (Nop!)"
+      ];
+  70 [
+      shape=box, style=rounded,
+      label="0x404563  mov  byte ptr 0x403041, al\l0x404568  cmp  al, 5\l",
+      fontname="Inconsolata", fontsize=10.0
+      ];
+  71 [
+      shape=box, style=rounded,
+      label="0x4046a8  inc  al\l0x4046aa  cmp  al, 7\l",
+      fontname="Inconsolata", fontsize=10.0
+      ];
+  72 [
+      shape=box, style=rounded,
+      label="0x4044d6  test  esi, 1\l",
+      fontname="Inconsolata", fontsize=10.0
+      ];
+  73 [
+      shape=box, style=rounded,
+      label="0x404331  shl  edi, 1\l0x404333  shr  esi, 1\l",
+      fontname="Inconsolata", fontsize=10.0
+      ];
+  74 [
+      shape=box, style=rounded,
+      label="0x4043d1  test  byte ptr [edx], 1\l",
+      fontname="Inconsolata", fontsize=10.0
+      ];
+  75 [
+      shape=box, style=rounded,
+      label="0x40438f  test  ebx, 1\l",
+      fontname="Inconsolata", fontsize=10.0];
+  76 [
+      shape=box, style=rounded,
+      label="0x4045c4  cmp  ecx, 0xFFFFFFFF\l",
+      fontname="Inconsolata", fontsize=10.0
+      ];
+  77 [
+      shape=box, style=rounded,
+      label="0x40443d  test  byte ptr [edx], 1\l",
+      fontname="Inconsolata", fontsize=10.0
+      ];
+  56 -> 70 [ label="", style="solid"];
+  55 -> 71 [ label="", style="solid"];
+  6 -> 74 [ label="", style="solid"];
+  0 -> 76 [ label="", style="solid"];
+  76 -> 1 [ label="zf=0", style="dashed"];
+  76 -> 58 [ label="zf=1", style="dashed"];
+  1 -> 21 [ label="", style="solid"];
+  2 -> 0 [ label="", style="solid"];
+  75 -> 2 [ label="zf=0", style="dashed"];
+  75 -> 0 [ label="zf=1", style="dashed"];
+  4 -> 56 [ label="", style="solid"];
+  74 -> 4 [ label="zf=0", style="dashed"];
+  74 -> 56 [ label="zf=1", style="dashed"];
+  7 -> 56 [ label="", style="solid"];
+  9 -> 77 [label="", style="solid"];
+  77 -> 7 [ label="zf=1", style="dashed"];
+  77 -> 56 [ label="zf=0", style="dashed"];
+  10 -> 11 [ label="zf=1", style="dashed"];
+  10 -> 56 [ label="zf=0", style="dashed"];
+  11 -> 56 [ label="", style="solid"];
+  12 -> 13 [ label="zf=1", style="dashed"];
+  12 -> 56 [ label="zf=0", style="dashed"];
+  13 -> 56 [ label="", style="solid"];
+  14 -> 73 [ label="zf=0", style="dashed"];
+  14 -> 57 [ label="zf=1", style="dashed"];
+  73 -> 72 [ label="", style="solid"];
+  16 -> 14 [ label="", style="solid"];
+  72 -> 16 [ label="zf=0", style="dashed"];
+  72 -> 14 [ label="zf=1", style="dashed"];
+  18 -> 72 [ label="", style="solid"];
+  19 -> 20 [ label="zf=1", style="dashed"];
+  19 -> 0 [ label="zf=0", style="dashed"];
+  20 -> 0 [ label="", style="solid"];
+  21 -> 19 [ label="zf=0", style="dashed"];
+  21 -> 75 [ label="zf=1", style="dashed"];
+  22 -> 21 [ label="", style="solid"];
+  23 -> 65 [ label="zf=0", style="dashed"];
+  23 -> 18 [ label="zf=1", style="dashed"];
+  25 -> 26 [ label="cf=1", style="dashed"];
+  25 -> 56 [ label="cf=0", style="dashed"];
+  26 -> 56 [ label="", style="solid"];
+  27 -> 40 [ label="zf=0", style="dashed"];
+  27 -> 38 [ label="zf=1", style="dashed"];
+  29 -> 27 [ label="zf=0", style="dashed"];
+  29 -> 67 [ label="zf=1", style="dashed"];
+  30 -> 29 [ label="zf=0", style="dashed"];
+  30 -> 60 [ label="zf=1", style="dashed"];
+  31 -> 32 [ label="zf=1", style="dashed"];
+  31 -> 69 [ label="zf=0", style="dashed"];
+  33 -> 31 [ label="zf=0", style="dashed"];
+  33 -> 12 [ label="zf=1", style="dashed"];
+  34 -> 33 [ label="zf=0", style="dashed"];
+  34 -> 10 [ label="zf=1", style="dashed"];
+  35 -> 34 [ label="zf=0", style="dashed"];
+  35 -> 59 [ label="zf=1", style="dashed"];
+  36 -> 35 [ label="zf=0", style="dashed"];
+  36 -> 9 [ label="zf=1", style="dashed"];
+  37 -> 36 [ label="zf=0", style="dashed"];
+  37 -> 6 [ label="zf=1", style="dashed"];
+  38 -> 39 [ label="zf=1", style="dashed"];
+  38 -> 56 [ label="zf=0", style="dashed"];
+  39 -> 56 [ label="", style="solid"];
+  40 -> 41 [ label="zf=1", style="dashed"];
+  40 -> 56 [ label="zf=0", style="dashed"];
+  41 -> 56 [ label="", style="solid"];
+  42 -> 25 [ label="zf=0", style="dashed"];
+  42 -> 66 [ label="zf=1", style="dashed"];
+  44 -> 42 [ label="zf=0", style="dashed"];
+  44 -> 22 [ label="zf=1", style="dashed"];
+  45 -> 44 [ label="zf=0", style="dashed"];
+  45 -> 63 [ label="zf=1", style="dashed"];
+  46 -> 45 [ label="zf=0", style="dashed"];
+  46 -> 64 [ label="zf=1", style="dashed"];
+  47 -> 46 [ label="zf=0", style="dashed"];
+  47 -> 62 [ label="zf=1", style="dashed"];
+  48 -> 47 [ label="zf=0", style="dashed"];
+  48 -> 61 [ label="zf=1", style="dashed"];
+  49 -> 48 [ label="zf=0", style="dashed"];
+  49 -> 23 [ label="zf=1", style="dashed"];
+  51 -> 49 [ label="zf=0", style="dashed"];
+  51 -> 30 [ label="zf=1", style="dashed"];
+  52 -> 51 [ label="zf=0", style="dashed"];
+  52 -> 37 [ label="zf=1", style="dashed"];
+  53 -> 52 [ label="", style="solid"];
+  54 -> 53 [ label="", style="solid"];
+  71 -> 54 [ label="cf=0", style="dashed"];
+  71 -> 53 [ label="cf=1", style="dashed"];
+  70 -> 55 [ label="zf=1", style="dashed"];
+  70 -> 52 [ label="zf=0", style="dashed"];
+  57 -> 56 [ label="", style="solid"];
+  58 -> 56 [ label="", style="solid"];
+  59 -> 56 [ label="", style="solid"];
+  60 -> 56 [ label="", style="solid"];
+  61 -> 56 [ label="", style="solid"];
+  62 -> 56 [ label="", style="solid"];
+  63 -> 56 [ label="", style="solid"];
+  64 -> 56 [ label="", style="solid"];
+  65 -> 56 [ label="", style="solid"];
+  66 -> 56 [ label="", style="solid"];
+  67 -> 56 [ label="", style="solid"];
+}
