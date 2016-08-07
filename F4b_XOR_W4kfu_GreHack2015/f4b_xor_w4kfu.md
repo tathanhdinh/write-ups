@@ -2,7 +2,9 @@
 
   We present a code reverse engineering task with our product Reven. The binary examined here is `F4b_XOR_W4kfu`, it is also the challenge of the highest point over all categories (cryptography, exploit, reverse engineering, etc) in the [Grehack 2015's CTF](https://grehack.fr/2015/ctf). The binary is heavily obfuscated, but the obfuscation techniques implemented are novel and interesting.
 
-  This is the first article of a series where we introduce our ongoing work in developing an *automated code deobfuscation* system using the *symbolic execution* framework of REVEN. Since our approach is **operational** (i.e. we require some information about how the obfuscation techniques are implemented) this article presents technical details that we discovered in reversing `F4b_XOR_W4kfu`. This is a quite verbose text :-), and we apologize for this annoying. We try our best to explicate not only "how" the challenge works without skipping any detail, but also sometime "why" it works that way, we believe that such a question might be more important.
+  This is the first article of a series where we introduce our ongoing work in developing an *automated code deobfuscation* system using the *symbolic execution* framework of REVEN. Since our approach is **operational** (i.e. we require some information about how the obfuscation techniques are implemented) this article presents technical details that we discovered in reversing `F4b_XOR_W4kfu`. 
+  
+  It is also quite verbose, and we apologize for this annoying. We try our best to explicate not only "how" the challenge works without skipping any detail, but also sometimes "why". We believe that such a question is more important.
 
   **Remark:**
   *To the our best knowledge, most approaches in binary code deobfuscation are operational, fully denotational approaches work in very strict cases only. As a direct consequence of [Rice's theorem](https://en.wikipedia.org/wiki/Rice%27stheorem), learning general programs simply from input/output relation is a well-known undecidable problem. Even for much more restricted contexts, static analysis is [proven to be NP-hard](http://citeseerx.ist.psu.edu/viewdoc/summary?doi=10.1.1.35.2337) for [smartly](https://www.cs.ucsb.edu/~chris/research/doc/acsac07limits.pdf) [obfuscated](http://llvm.org/pubs/2008-02-ImpedingMalwareAnalysis.pdf) programs. Recent [semantics-based](https://www.cs.arizona.edu/people/debray/Publications/ccs-unvirtualize.pdf) approaches are intrinsically [operational](http://static.usenix.org/event/woot09/tech/full_papers/rolles.pdf); though [some](https://cs.arizona.edu/~debray/Publications/ccs2015-symbolic.pdf) are considered [generic](https://www.cs.arizona.edu/people/debray/Publications/generic-deobf.pdf), they work only on simple cases of very specific obfuscation techniques. However, special classes of loop-free programs can be efficiently [synthesized](http://people.eecs.berkeley.edu/~sseshia/pubdir/synth-icse10.pdf) from input/output with helps of SMT solvers.*
@@ -35,17 +37,17 @@
 
   The program uses several **obfuscation** techniques to prevent itself from being analyzed. *First*, its execution traces are extremely long taking consideration that the program is *just* a CTF challenge. To get some idea about how long these traces are, after receiving the input, there are 2.716.465.511 instructions executed until the first comparison of the password checking procedure. This is because of a [code decryption/re-encryption](https://www.cosic.esat.kuleuven.be/wissec2006/papers/3.pdf) mechanism and of a [nested multiprocess virtual machine](https://aspire-fp7.eu/spro/wp-content/uploads/SPRO2015_Workshop_Talk_V2.pdf) execution model.
 
-  *Second*, the "input related" instructions in a trace are not local, they spread out the long trace, and hard to be [sliced](https://en.wikipedia.org/wiki/Program_slicing). That makes difficult to figure out how the input password is manipulated and checked. Moreover the password checking algorithm is "mostly" constant time.
+  *Second*, the "input related" instructions are not local, they spread out the long trace, and hard to be [sliced](https://en.wikipedia.org/wiki/Program_slicing). That makes difficult to figure out how the input password is manipulated and checked. Moreover the password checking algorithm is "mostly" constant time.
 
-  *Last but not least*, most instructions of the binary are encrypted, they are decrypted just before executing and are immediately encrypted later, so we cannot [unpack](https://www.cs.arizona.edu/people/debray/Publications/static-unpacking.pdf) it in the [classical sense](http://ftp.cs.wisc.edu/paradyn/papers/Roundy12Packers.pdf). The code [formal approximation](https://en.wikipedia.org/wiki/Abstract_interpretation) using [phase semantics](https://www.cs.arizona.edu/people/debray/Publications/metamorphic.pdf) works but its result is trivial: the fixed point is too coarse to analyze on. More relaxed approaches based on code [phases](https://www.semanticscholar.org/paper/Reverse-Engineering-Self-Modifying-Code-Unpacker-Debray-Patel/01e90e360114da419a98591c2b58ec54154d6a0b/pdf) or [waves](https://hal.inria.fr/hal-01257908/file/codisasm.pdf) cannot apply since they require that the code must be "stable" at some execution point. Recently, some authors classify such technique of code packing into [type VI](http://s3.eurecom.fr/docs/oakland15_packing.pdf), the most sophisticated class of binary code packers.
+  *Last but not least*, most instructions of the binary are encrypted, they are decrypted just before executing and are immediately encrypted later, so we cannot [unpack](https://www.cs.arizona.edu/people/debray/Publications/static-unpacking.pdf) it in the [classical sense](http://ftp.cs.wisc.edu/paradyn/papers/Roundy12Packers.pdf). The code [formal approximation](https://en.wikipedia.org/wiki/Abstract_interpretation) using [phase semantics](https://www.cs.arizona.edu/people/debray/Publications/metamorphic.pdf) should works but its result is also trivial: the fixed point is too coarse to analyze on. More practical approaches based on code [phases](https://www.semanticscholar.org/paper/Reverse-Engineering-Self-Modifying-Code-Unpacker-Debray-Patel/01e90e360114da419a98591c2b58ec54154d6a0b/pdf) or [waves](https://hal.inria.fr/hal-01257908/file/codisasm.pdf) cannot apply since they require that the code must be "stable" at some execution point. Recently, some authors classify such technique of code packing into [type VI](http://s3.eurecom.fr/docs/oakland15_packing.pdf), the most sophisticated class of binary code packers.
 
   These properties make difficult for direct dynamic/concolic/static analysis, this binary is also a fine counterexample which invalidates hypothesis in current automated code deobfuscation methods. Low-hanging fruit approaches, e.g. black-box attack on counting number of executed instructions, seems not feasible: there is volume of more than 2.7 billion instructions must be passed before reaching the first "input sensitive" comparison
 
 ## Workaround
 
-  The binary has 4 sections, all are marked as executable, writable and executable, how evil it is >:). The section `.frisk0` seems only an ID of all GreHack's binaries, so we are not surprise. The binary starts from `0x402000` which is also the entry point, no TLS callback trick is applied, as confirmed by both Reven and IDA.
+  The binary has 4 sections, all are marked as executable, writable and executable. The section `.frisk0` seems only an ID of all GreHack's binaries, so we are not surprise. The execution starts from `0x402000` which is also the entry point, no TLS callback trick is applied, as confirmed by both Reven and IDA.
 
-  Several first instructions are not interesting, for example, ones at `0x402008` and `0x402013` are calls to `GetStdHandle`, there is also a call `WriteFile` at `0x40202c`, and a call `ReadFile` at `0x402042`. They print the strings `Welcome!` and `Password?`, then reads password from the standard input.
+  Several first instructions seem benign, for example, ones at `0x402008` and `0x402013` are calls to `GetStdHandle` The program calls `WriteFile` at `0x40202c`, and `ReadFile` at `0x402042`. It prints the strings `Welcome!` and `Password?`, then reads from the standard input.
 
   ![Synchronization between REVEN-Axion and IDA Pro](./reven_sync_idapro.png)
 
@@ -53,7 +55,7 @@
 
 ### Code overwriting
 
-  Passing statically over simple instructions above, the next instructions seem "benign" :-), some `nop`(s), then a `call 0x40400`. However, Reven notices that there are lots of **execution after write** (i.e. some memory addresses are overwritten before getting executed). Some of them are redundant alerts since the process mapping mechanism of `ntoskrnl.exe`, but the first one which really attracts our attention is at `0x402058`: the really executed instruction is `xor eax, eax`, instead of `js 0x40200d` from the static disassembling result.
+  Passing statically over simple instructions above, the next instructions seem "normal", some `nop`(s), then a `call 0x40400`. However, Reven notices that there are lots of **execution after write** (i.e. some memory addresses are overwritten before getting executed). Some of them are redundant alerts since the process mapping mechanism of `ntoskrnl.exe`, but the first one which really attracts our attention is at `0x402058`: the really executed instruction is `xor eax, eax`, instead of `js 0x40200d` from the static disassembling result.
 
   ![Execution after write](./reven_exec_after_write.png)
 
@@ -78,7 +80,7 @@
 
   The form of control flow graph suggests that it may be a **virtual machine** with [switch-based dispatcher](http://static.usenix.org/event/woot09/tech/full_papers/rolles.pdf). The typical form of such a VM consists of a *dispatcher* spreads over several basic blocks; and there exist many *opcode handlers*, each located in a "non trivial" basic block to which control flow is transferred from a much smaller number of "dispatch points".
 
-  The basic blocks for opcode handlers are possibly, for example, ones start with the instruction at `0x402513`, `0x40206a`, `0x4025d`, etc; the control flow transferred to all of them comes from the basic block ends with `0x4042e0`, which may be the *dispatch point* of the dispatcher. Moreover, these basic blocks transfer control flow to the same basic block start with the address `0x404000` (since they both end with `call 0x404000`), which may be supposed that this is the *entry point* of the dispatcher.
+  The basic blocks for opcode handlers are possibly, for example, ones start with the instruction at `0x402513`, `0x40206a`, `0x4025d`, etc; the control flow transferred to all of them comes from the basic block ends with `0x4042e0`, which may be the *dispatch point* of the dispatcher. Moreover, these basic blocks transfer the control flow to the same basic block start with the address `0x404000` (since they both end with `call 0x404000`), which may be the *entry point* of the dispatcher.
 
   **Remark:**
   *There are basic blocks, for example, at `0x4043a4`, `0x404371`, `0x40428c`, etc. which come from (and reach to) the same address; but they might not opcode handlers since their semantics is trivial: most of them consists of just a simple unconditional`jmp 0x40428`.*
@@ -115,15 +117,14 @@
 
   ![Return address table](./reven_rop_table.svg)
 
-  Entries in this table are consecutive: *the location of the next entry is calculated by adding the current entry with its length*. So once we know the starting address, which is `0x404309`, all entries can be completely located. The following function calculates the new return address from the current one.
+  Entries in this table are consecutive: *the location of the next entry is calculated by adding the current entry with its length*. So once we know the starting address, which is `0x404309`, all entries can be completely located. The following algorithm calculates the new return address `nextRet` from the current one `currentRet`.
 
-    // retTable is the array of byte(s) from 0x404309
-    let calculateNewReturnAddress (retAddr:uint32) (retTable:byte[]) =
-      let mutable entryOffset = 0
-      while retAddr <> System.BitConverter.ToUInt32(retTable, entryOffset) do
-        let entryLength = retTable.[entryOffset + 4]
-        entryOffset <- entryOffset + (int entryLength)
-      uint32 (entryOffset + 10)
+    let retTable be the array of bytes from 0x404309
+    let mutable entryOffset = 0
+    while currentRet <> dword [retTable + entryOffset] do // look for the corresponding entry
+      let entryLength = retTable[entryOffset + 4]
+      entryOffset <- entryOffset + entryLength
+    nextRet = dword [retTable + entryOffset + 10]
 
 #### Address interval computation and encryption
 
@@ -238,7 +239,7 @@
   *one uses IDA can use the following Python script to decrypt the binary, when synchronizing the IDA's view with Reven (using qb-sync plugin), then get a familiar effect of debugging a program but without caring that it is encrypted B-)*
   
     def decrypt_interval(lo_addr, hi_addr):
-	  print 'decrypting opcode from 0x{0:x} to 0x{1:x}'.format(lo_addr, hi_addr)
+	  print 'decrypting gadget from 0x{0:x} to 0x{1:x}'.format(lo_addr, hi_addr)
 	  mask_offset = 0x40405e
 	  for addr in range(lo_addr, hi_addr):
 		  orig_byte = Byte(addr)
@@ -358,7 +359,7 @@
   **Remark:**
   *When coming to this point of reversing the first virtual machine, honestly, we had a big "why" question about its design. We initially thought that the author must be crazy or something like that :D. Who on earth designed such an evil VM allowing implicit control flow inside gadgets?*
   
-  *We tried to guess, such a design allows intra-gadget nontrivial control flow (e.g. a loop). One may notice that this VM has "no table of opcodes" that exists normally in virtual machines, indeed the dispatcher diverts the control flow between entry points using only the table of return address and the unusual effect of the gadget memory layout, each gadget does not correspond to an atomic operation. So this is rather a pseudo-virtual machine, its purpose may be just to hide another thing below.*
+  *We tried to guess, such a design allows intra-gadget nontrivial control flow (e.g. a loop). One may notice that this VM has no "table of opcodes" that would exist normally in virtual machines. Indeed, the dispatcher diverts the control flow between entry points using only the table of return address and the unusual effect of the gadget memory layout, each gadget does not correspond to an atomic operation. So this is rather a pseudo-virtual machine, its purpose may be just to hide another thing below.*
   
   *A gentle "aha!!!" is for the interference of transition codes, if all of them is just a trivial unconditional jump then that is not worth to design an entry with a field for transition code. Fortunately, they are not, the purpose of such a design might be to allow the author to insert arbitrary noise into the operation of gadgets.*
   
@@ -383,5 +384,8 @@
   (this is a vector image, click on it to observe the details)
   
   It starts at `0x402048` (the blue basic block), and terminates at either `0x4023d4` (for `Yes!` result) or `0x40266e` (for `Nop!`). Well, this seems still quite sophisticated #:-S
+  
+  **Remark:**
+  *The control flow graph generated above is not only complete but also sound, we can check on Reven that all basic blocks are executed, there are no opaque predicates.*
 
 ## Reversing the second virtual machine
