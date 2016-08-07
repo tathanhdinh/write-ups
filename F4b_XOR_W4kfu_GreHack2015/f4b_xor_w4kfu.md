@@ -69,7 +69,7 @@
   We now know that the binary will modify some instructions before executing them, this can be revealed by examining the instructions following `call 0x40400`; but to get quickly an intuition about what is going on, we extract a partial *control flow graph* from the trace of Reven. The following graph is constructed from a trace of 10.000.000 instructions starting from `0x402048`.
 
   ![Partial control flow graph](./F4b_cfg_n.svg)
-  (this is a high-resolution image, click on it to observe the details)
+  (this is a vector image, click on it to observe the details)
 
   **Remark:**
   *The control flow graph given by Reven is partial since it is constructed using the dynamic trace computed from running program with a concrete input, but it gives at least some information about which kind of code that we deal with.*
@@ -377,4 +377,11 @@
           add conditional flows (ep_i -> ep_j) and (ep_i -> epN).
         else
           add conditional flow (ep_i -> t -> ep_j) and (ep_i -> t -> epN)
+  (a transition code `t` is trivial if it is a unconditional jump), that reveals the control flow graph:
   
+  ![Control flow graph of the first VM](./cfg_first_vm_simple.svg)
+  (this is a vector image, click on it to observe the details)
+  
+  It starts at `0x402048` (the blue basic block), and terminates at either `0x4023d4` (for `Yes!` result) or `0x40266e` (for `Nop!`). Well, this seems still quite sophisticated #:-S
+
+## Reversing the second virtual machine

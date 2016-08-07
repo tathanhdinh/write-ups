@@ -116,9 +116,9 @@ digraph G {
       fontname="Inconsolata", fontsize=10.0
       ];
   32 [
-      shape=box, style=rounded,
-      label="0x4023d4  mov  ecx, 0x403ca3
-      (Yes!)"
+      shape=box, style="rounded,filled",
+      fillcolor="gainsboro",
+      label="0x4023d4  mov  ecx, 0x403ca3 ; (Yes!)\l"
       ];
   33 [
       shape=box, style=rounded,
@@ -146,22 +146,22 @@ digraph G {
       ];
   38 [
       shape=box, style=rounded,
-      label="0x40227f  movzx  eax, byte ptr 0x403ca7\l0x402286  shl  eax, 2\l0x402289  mov  ebx, [eax+0x40268b]\l0x40228f  mov  ax, word ptr 0x403042\l0x402295  xor  edx, edx\l0x402297  mov  ecx, 8\l0x40229c  div  ecx\l0x40229e  add  ebx, eax\l0x4022a0  mov  ebx, [ebx]\l0x4022a2  bswap  ebx\l0x4022a4  mov  cl, dl\l0x4022a6  shl  ebx, cl ; opcode\l0x4022a8  sub  word ptr 0x403042, 0xa ; restore continuation\l0x4022b0  shr  ebx, 0x10\l0x4022b3  mov  edx, ebx\l0x4022b5  add  edx, 0x403732\l0x4022bb  mov  dl, [edx]\l0x4022bd  cmp  dl, byte ptr 0x403ca7\l",
+      label="0x40227f  movzx  eax, byte ptr 0x403ca7\l0x402286  shl  eax, 2\l0x402289  mov  ebx, [eax+0x40268b]\l0x40228f  mov  ax, word ptr 0x403042\l0x402295  xor  edx, edx\l0x402297  mov  ecx, 8\l0x40229c  div  ecx\l0x40229e  add  ebx, eax\l0x4022a0  mov  ebx, [ebx]\l0x4022a2  bswap  ebx\l0x4022a4  mov  cl, dl\l0x4022a6  shl  ebx, cl ; opcode\l0x4022a8  sub  word ptr 0x403042, 0xa\l0x4022b0  shr  ebx, 0x10\l0x4022b3  mov  edx, ebx\l0x4022b5  add  edx, 0x403732\l0x4022bb  mov  dl, [edx]\l0x4022bd  cmp  dl, byte ptr 0x403ca7\l",
       fontname="Inconsolata", fontsize=10.0
       ];
   39 [
       shape=box, style=rounded,
-      label="0x4022c9  add  word ptr 0x403042, 0x1a\l0x4022d1  shl  ebx, 2\l0x4022d4  add  ebx, 0x403198 ; password buffer\l0x4022da  movzx  edx, byte ptr 0x403ca7\l0x4022e1  shl  edx, 5\l0x4022e4  add  edx, 0x403ca8\l0x4022ea  shl  edi, 2\l0x4022ed  add  edx, edi\l0x4022ef  mov  edx, [edx]\l0x4022f1  mov  [ebx], edx\l",
+      label="0x4022c9  add  word ptr 0x403042, 0x1a\l0x4022d1  shl  ebx, 2\l0x4022d4  add  ebx, 0x403198\l0x4022da  movzx  edx, byte ptr 0x403ca7\l0x4022e1  shl  edx, 5\l0x4022e4  add  edx, 0x403ca8\l0x4022ea  shl  edi, 2\l0x4022ed  add  edx, edi\l0x4022ef  mov  edx, [edx]\l0x4022f1  mov  [ebx], edx\l",
       fontname="Inconsolata", fontsize=10.0
       ];
   40 [
       shape=box, style=rounded,
-      label="0x402206  movzx  eax, byte ptr 0x403ca7\l0x40220d  shl  eax, 2\l0x402210  mov  ebx, [eax+0x40268b]\l0x402216  mov  ax, 0x403042\l0x40221c  xor  edx, edx\l0x40221e  mov  ecx, 8\l0x402223  div  ecx\l0x402225  add  ebx, eax\l0x402227  mov  ebx, [ebx]\l0x402229  bswap  ebx\l0x40222b  mov  cl, dl\l0x40222d  shl  ebx, cl ; opcode\l0x40222f  sub  word ptr 0x403042, 0xa ; restore continuation\l0x402237  shr  ebx, 0x10\l0x40223a  mov  edx, ebx\l0x40223c  add  edx, 0x403732\l0x402242  mov  dl, [edx]\l0x402244  cmp  dl, byte ptr 0x403ca7\l",
+      label="0x402206  movzx  eax, byte ptr 0x403ca7\l0x40220d  shl  eax, 2\l0x402210  mov  ebx, [eax+0x40268b]\l0x402216  mov  ax, 0x403042\l0x40221c  xor  edx, edx\l0x40221e  mov  ecx, 8\l0x402223  div  ecx\l0x402225  add  ebx, eax\l0x402227  mov  ebx, [ebx]\l0x402229  bswap  ebx\l0x40222b  mov  cl, dl\l0x40222d  shl  ebx, cl ; opcode\l0x40222f  sub  word ptr 0x403042, 0xa\l0x402237  shr  ebx, 0x10\l0x40223a  mov  edx, ebx\l0x40223c  add  edx, 0x403732\l0x402242  mov  dl, [edx]\l0x402244  cmp  dl, byte ptr 0x403ca7\l",
       fontname="Inconsolata", fontsize=10.0
       ];
   41 [
       shape=box, style=rounded,
-      label="0x402250  add  word ptr 0x403042, 0x1a\l0x402258  shl  ebx, 2\l0x40225b  add  ebx, 0x403198 ; password buffer\l0x402261  mov  ebx, [ebx]\l0x402263  movzx  edx, byte ptr 0x403ca7\l0x40226a  shl  edx, 5\l0x40226d  add  edx, 0x403ca8\l0x402273  shl  esi, 2\l0x402276  add  edx, esi\l0x402278  mov  [edx], ebx\l",
+      label="0x402250  add  word ptr 0x403042, 0x1a\l0x402258  shl  ebx, 2\l0x40225b  add  ebx, 0x403198\l0x402261  mov  ebx, [ebx]\l0x402263  movzx  edx, byte ptr 0x403ca7\l0x40226a  shl  edx, 5\l0x40226d  add  edx, 0x403ca8\l0x402273  shl  esi, 2\l0x402276  add  edx, esi\l0x402278  mov  [edx], ebx\l",
       fontname="Inconsolata", fontsize=10.0
       ];
   42 [
@@ -285,8 +285,7 @@ digraph G {
   69 [
       shape=box,
       style="filled,rounded",
-      fillcolor="gainsboro", label="0x40266e  mov  ecx, 0x403044
-      (Nop!)"
+      fillcolor="gainsboro", label="0x40266e  mov  ecx, 0x403044 ; (Nop!)\l"
       ];
   70 [
       shape=box, style=rounded,
@@ -327,6 +326,13 @@ digraph G {
       label="0x40443d  test  byte ptr [edx], 1\l",
       fontname="Inconsolata", fontsize=10.0
       ];
+  78 [
+      shape=box, style=rounded,
+      label="0x402673  push 0\l0x402675  lea eax, [ebp-0xc]\l0x402678  push eax\l0x402679  push 4\l0x40267b  push ecx\l0x40267c  push dword ptr [ebp-0x4]\l0x40267f  call WriteFile\l0x402685  ExitProcess\l",
+      fontname="Inconsolata", fontsize=10.0
+      ];
+  69 -> 78 [ label="", style="solid"];
+  32 -> 78 [ label="", stype="solid"];
   56 -> 70 [ label="", style="solid"];
   55 -> 71 [ label="", style="solid"];
   6 -> 74 [ label="", style="solid"];
