@@ -78,7 +78,7 @@
 
   The form of control flow graph suggests that it may be a **virtual machine** with [switch-based dispatcher](http://static.usenix.org/event/woot09/tech/full_papers/rolles.pdf). The typical form of such a VM consists of a *dispatcher* spreads over several basic blocks; and there exist many *opcode handlers*, each located in a "non trivial" basic block to which control flow is transferred from a much smaller number of "dispatch points".
 
-  The basic blocks representing opcode handlers are possibly, for example, ones start with the instruction at `0x402513`, `0x40206a`, `0x4025d`, etc; the control flow transferred to all of them comes from the basic block ends with `0x4042e0`, which may be the *dispatch point* of the dispatcher. Moreover, these basic blocks transfer control flow to the same basic block start with the address `0x404000` (since they both end with `call 0x404000`), which may be supposed that this is the *entry point* of the dispatcher.
+  The basic blocks for opcode handlers are possibly, for example, ones start with the instruction at `0x402513`, `0x40206a`, `0x4025d`, etc; the control flow transferred to all of them comes from the basic block ends with `0x4042e0`, which may be the *dispatch point* of the dispatcher. Moreover, these basic blocks transfer control flow to the same basic block start with the address `0x404000` (since they both end with `call 0x404000`), which may be supposed that this is the *entry point* of the dispatcher.
 
   **Remark:**
   *There are basic blocks, for example, at `0x4043a4`, `0x404371`, `0x40428c`, etc. which come from (and reach to) the same address; but they might not opcode handlers since their semantics is trivial: most of them consists of just a simple unconditional`jmp 0x40428`.*
@@ -90,7 +90,7 @@
   ![Instruction counting](./reven_ins_count_histo.svg)
 
   **Remark:**
-  *Such a form of control flow graph can be observed also in binaries obfuscated by [VMProtect](http://vmpsoft.com/) and some early versions of [Code Virtualizer](http://oreans.com/codevirtualizer.php). In recent versions, Code Virtualizer uses [threaded code](http://home.claranet.nl/users/mhx/ForthBell.pdf): the control flow to the next opcode's basic block will be calculated at the end of the current opcode, then we cannot observe this form. In some ad-hoc VM obfuscated binaries, e.g. [HyperUnpackMe2](http://crackmes.de/users/thehyper/hyperunpackme2/), the dispatcher has even multiple dispatch points (there was a very nice [writeup](http://www.openrce.org/articles/full_view/28) of this binary using IDA).*
+  *Such a form of control flow graph can be observed also in binaries obfuscated by [VMProtect](http://vmpsoft.com/) and some early versions of [Code Virtualizer](http://oreans.com/codevirtualizer.php). In recent versions, Code Virtualizer uses [threaded code](http://home.claranet.nl/users/mhx/ForthBell.pdf): the control flow to the next opcode's handler will be calculated at the end of the current handler, then we cannot observe this form. In some ad-hoc VM obfuscated binaries, e.g. [HyperUnpackMe2](http://crackmes.de/users/thehyper/hyperunpackme2/), the dispatcher has even multiple dispatch points (there was a very nice [writeup](http://www.openrce.org/articles/full_view/28) of this binary using IDA).*
   
   *The patterns discussed above just give a hint to recognize the applied obfuscation technique. Without a serious analysis, we cannot say that the binary is obfuscated by a VM. Indeed, the same patterns can be observed in programs which are not obfuscated at all, and conversely some program are VM obfuscated but these pattern are not [directly visible](http://www.lancaster.ac.uk/staff/wangz3/publications/trustcom.pdf). Finally, we do not give a formal definition for virtualization obfuscation yet :-). We will come back to this problem in next articles.*
 
@@ -152,7 +152,7 @@
     * backed up the address of the entry as a `dword` at `0x40405a`, finally
     * used `ret` to transfer the control flow to the `transition code`.
   
-  At this point, we cannot yet "prove" the meaning of the address interval, neither the `dword` stored at `0x404052` (we will do this later). But honestly, using the global control flow graph, and dynamically checking on Reven how these addresses are used, we **already know** that each interval is actually the bound of the basic block representing an opcode, the `dword` at `0x404052` stores nothing but the entry point of the last executed opcode. One using other tools might think that this is tricky :P, but Reven is really helpful in suggesting what happened.
+  At this point, we cannot yet "prove" the meaning of the address interval, neither the `dword` stored at `0x404052` (we will do this later). But honestly, using the global control flow graph, and dynamically checking on Reven how these addresses are used, we **already know** that each interval is possibly the bound of an opcode handler, the `dword` at `0x404052` stores nothing but the entry point of the last executed handler. This might be tricky :P, but Reven is really helpful in suggesting what happened.
 
 ### Transition code
 
@@ -175,7 +175,7 @@
  
 #### Return address modification
 
-  The second phase uses some similar tricks as the first one. The last instruction `ret` diverts also the control flow to different addresses, this is the effect of the instruction at `0x404208c` (which reverses a space for the return address), and one at `0x4042c2` (which fills the return address). From the global control flow graph, each return address commence a basic block corresponding with an opcode of the first virtual machine.
+  The second phase uses some similar tricks as the first one. The last instruction `ret` diverts also the control flow to different addresses, this is the effect of the instruction at `0x404208c` (which reverses a space for the return address), and one at `0x4042c2` (which fills the return address). From the global control flow graph, each return address commence an opcode handler.
   
 #### Inter-phase encryption/decryption relation
 
@@ -304,15 +304,17 @@
     28   | 14       | 0        | ZF
     29   | 14       | 1        | ZF
     
-  That means if the value of `flag` is 16, then the conditional jumps depends on comparing the carry flag with 0; if `flag` is 17 then on comparing the carry flag with 1; etc. Interestingly, if the `flag` is 19, then the conditional jumps always take.
+  That means if the value of `flag` is 16, then the conditional jumps depends on the result of the comparison between the carry flag with 0; if `flag` is 17 then the carry flag is compared with 1; etc. Interestingly, if the `flag` is 19, then the conditional jumps always take (because ).
   
-  **Next entry point calculation:** the address of the next executed instruction has been calculated using the following algorithm:
+  **Next entry point calculation:** the address `next_e` of the next executed instruction has been calculated from the original return address `e` using the following algorithm:
   
-    1. use the original return address to find the corresponding entry in the return address table,
-    2. extract the value of `flag` field, use the table above find the corresponding flag register,
-    3. compare `flag % 2` with this flag register; if they are equal, then
-    4. the next executed address is the value of the field `next return address` of the entry, otherwise
-    5. it is the original return address.
+    let E be the corresponding entry of e in the return address table
+    let fE = E.flag
+    let r be the corresponding flag register of fE // see the flag comparison table above
+    if fE % 2 = r then
+      next_e = E.next_return_address
+    else
+      next_e = e
   
 ### Static control flow recovering
 
@@ -362,11 +364,17 @@
   
 #### Control flow graph
 
-  The control flow between gadget entry points are completely understood, constructing the control flow graph without dispatcher is just a procedural work now. For example, we have used the following algorithm to construct the control flow graph: let `ep_0,ep_1,...,ep_n` be the sorted list of all entry points
-    
-    for each pair of consecutive element (ep_i, ep_j)
-    1. if ep_i and ep_j are in the same gadget, then add the unconditional flow (ep_i -> ep_j); else
-    2. ep_j must be a natural entry point, look for its corresponding entry in the return address table,
-    3. add conditional flows (ep_i -> ep_j) and (ep_i -> next return address of the entry).
+  The flow between gadget entry points are completely reversed, constructing the control flow graph without dispatcher is just a procedural work now. For example, we have used the following algorithm:
   
+    let ep_0,ep_1,...,ep_n be the sorted list of all entry points,
+    for each pair of consecutive element (ep_i, ep_j)
+      if ep_i and ep_j are in the same gadget then 
+        add the unconditional flow (ep_i -> ep_j)
+      else // ep_j must be a natural entry point
+        let E be the corresponding entry of e in the return address table
+        let epN = E.new_return_address
+        if the transition code t of E is trivial then
+          add conditional flows (ep_i -> ep_j) and (ep_i -> epN).
+        else
+          add conditional flow (ep_i -> t -> ep_j) and (ep_i -> t -> epN)
   

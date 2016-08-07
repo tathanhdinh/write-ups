@@ -1,0 +1,25 @@
+digraph G {
+  0 [
+     fontname="Source Code Pro", fontsize=10, shape=box, style=rounded,
+     label=<0x404000  pushfd <br align="left"/>0x404001  push eax<br align="left"/>0x404002  push ebx<br align="left"/>0x404003  push ecx<br align="left"/>0x404004  push edx<br align="left"/><font color="blue">0x404005  mov ebx, dword ptr [esp+0x14]</font><br align="left"/>0x404009  mov dword ptr [0x404056], ebx<br align="left"/>0x40400f  push ebx<br align="left"/>0x404010  mov ebx, dword ptr [0x404052]<br align="left"/><font color="orange">0x404016  call 0x404276</font><br align="left"/>0x40401b  push 0x40405e<br align="left"/>0x404020  push edx<br align="left"/>0x404021  push ecx<br align="left"/><font color="orange">0x404022  call 0x40424d</font><br align="left"/>0x404027  add esp, 0xc<br align="left"/>0x40402a  pop ebx<br align="left"/>0x40402b  mov eax, 0x404309<br align="left"/>>
+     ];
+  
+  1 [
+     fontname="Source Code Pro", fontsize=10, shape=box, style=rounded,
+     label=<0x404030  cmp ebx, dword ptr [eax]<br align="left"/>0x404032  jz 0x40403d<br align="left"/>>
+     ];
+
+  2 [
+     fontname="Source Code Pro",  fontsize=10, shape=box, style=rounded,
+     label=<0x404034  movzx edx, byte ptr [eax+0x4]<br align="left"/>0x404038  lea eax, ptr [edx+eax*1]<br align="left"/>0x40403b  jnz 0x404030<br align="left"/>>];
+
+  3 [
+     fontname="Source Code Pro",  fontsize=10, shape=box, style=rounded,
+     label=<0x40403d  mov dword ptr [0x40405a], eax<br align="left"/>0x404042  lea eax, ptr [eax+0xa]<br align="left"/><font color="blue">0x404045  mov dword ptr [esp+0x14], eax</font><br align="left"/>0x404049  pop edx<br align="left"/>0x40404a  pop ecx<br align="left"/>0x40404b  pop ebx<br align="left"/>0x40404c  pop eax<br align="left"/>0x40404d  popfd <br align="left"/>0x40404e  ret <br align="left"/>>];
+  
+  0 -> 1 [];
+  1 -> 2 [];
+  1 -> 3 [];
+  2 -> 1 [];
+  2 -> 3 [];
+}
