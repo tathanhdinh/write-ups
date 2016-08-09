@@ -83,7 +83,7 @@
   The basic blocks for opcode handlers are possibly, for example, ones start with the instruction at `0x402513`, `0x40206a`, `0x4025d`, etc; the control flow transferred to all of them comes from the basic block ends with `0x4042e0`, which may be the *dispatch point* of the dispatcher. Moreover, these basic blocks transfer the control flow to the same basic block start with the address `0x404000` (since they both end with `call 0x404000`), which may be the *entry point* of the dispatcher.
 
   **Remark:**
-  *There are basic blocks, for example, at `0x4043a4`, `0x404371`, `0x40428c`, etc. which come from (and reach to) the same address; but they might not opcode handlers since their semantics is trivial: most of them consists of just a simple unconditional`jmp 0x40428`.*
+  *There are basic blocks, for example, at `0x4043a4`, `0x404371`, `0x40428c`, etc. which come from (and reach to) the same address; but they might not opcode handlers since their semantics is trivial: most of them consists of just a simple unconditional direct `jmp 0x40428`.*
 
 #### Distinguished instruction rate
 
@@ -102,7 +102,7 @@
 
 ### First phase
 
-  The dispatcher can be divided into "two phases", between them are "transition instructions". The first phase comes with the following control flow graph.
+  The dispatcher can be divided into "two phases" with "transition instructions" between: the second strictly [postdominances](https://en.wikipedia.org/wiki/Dominator_(graph_theory)) the transition code, whereas the transition strictly postdominances the first phase. This comes with the following control flow graph.
 
   ![First part of the dispatcher](./reven_first_part_dispatcher.svg)
 
@@ -361,7 +361,7 @@
   
   *We tried to guess, such a design allows intra-gadget nontrivial control flow (e.g. a loop). One may notice that this VM has no "table of opcodes" that would exist normally in virtual machines. Indeed, the dispatcher diverts the control flow between entry points using only the table of return address and the unusual effect of the gadget memory layout, each gadget does not correspond to an atomic operation. So this is rather a pseudo-virtual machine, its purpose may be just to hide another thing below.*
   
-  *A gentle "aha!!!" is for the interference of transition codes, if all of them is just a trivial unconditional jump then that is not worth to design an entry with a field for transition code. Fortunately, they are not, the purpose of such a design might be to allow the author to insert arbitrary noise into the operation of gadgets.*
+  *A gentle "aha!!!" is for the interference of transition codes, if all of them is just a trivial unconditional direct jump then that is not worth to design an entry with a field for transition code. Fortunately, they are not, the purpose of such a design might be to allow the author to insert arbitrary noise into the operation of gadgets.*
   
 #### Control flow graph
 
@@ -378,7 +378,7 @@
           add conditional flows (ep_i -> ep_j) and (ep_i -> epN).
         else
           add conditional flow (ep_i -> t -> ep_j) and (ep_i -> t -> epN)
-  (a transition code `t` is trivial if it is a unconditional jump), that reveals the control flow graph:
+  (a transition code `t` is trivial if it is a unconditional direct jump), that reveals the control flow graph:
   
   ![Control flow graph of the first VM](./cfg_first_vm_simple.svg)
   (this is a vector image, click on it to observe the details)
@@ -386,6 +386,6 @@
   It starts at `0x402048` (the blue basic block), and terminates at either `0x4023d4` (for `Yes!` result) or `0x40266e` (for `Nop!`). Well, this seems still quite sophisticated #:-S
   
   **Remark:**
-  *The control flow graph generated above is not only complete but also sound, we can check on Reven that all basic blocks are executed, there are no opaque predicates.*
+  *The control flow graph generated above is not only complete but also sound: there are no redundant control flow neither useless basic blocks. We can check on Reven that all instructions are executed.*
 
 ## Reversing the second virtual machine
