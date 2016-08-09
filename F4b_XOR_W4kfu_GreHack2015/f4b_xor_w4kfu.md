@@ -39,9 +39,9 @@
 
   *Second*, the "input related" instructions are not local, they spread out the long trace, and hard to be [sliced](http://www.cs.columbia.edu/~junfeng/08fa-e6998/sched/readings/slicing.pdf). That makes difficult to figure out how the input password is manipulated and checked. Moreover the password checking algorithm is "mostly" constant time.
 
-  *Last but not least*, most instructions of the binary are encrypted, they are decrypted just before executing and are immediately encrypted later, so we cannot [unpack](https://www.cs.arizona.edu/people/debray/Publications/static-unpacking.pdf) it in the [classical sense](http://ftp.cs.wisc.edu/paradyn/papers/Roundy12Packers.pdf). The code [formal approximation](https://en.wikipedia.org/wiki/Abstract_interpretation) using [phase semantics](https://www.cs.arizona.edu/people/debray/Publications/metamorphic.pdf) should works but its result is also trivial: the fixed point is too coarse to analyze on. More practical approaches based on code [phases](https://www.semanticscholar.org/paper/Reverse-Engineering-Self-Modifying-Code-Unpacker-Debray-Patel/01e90e360114da419a98591c2b58ec54154d6a0b/pdf) or [waves](https://hal.inria.fr/hal-01257908/file/codisasm.pdf) cannot apply since they require that the code must be "stable" at some execution point. Recently, some authors classify such technique of code packing into [type VI](http://s3.eurecom.fr/docs/oakland15_packing.pdf), the most sophisticated class of binary code packers.
+  *Last but not least*, most instructions of the binary are encrypted, they are decrypted just before executing and are immediately encrypted later, so we cannot [unpack](https://www.cs.arizona.edu/people/debray/Publications/static-unpacking.pdf) it in the [classical sense](http://ftp.cs.wisc.edu/paradyn/papers/Roundy12Packers.pdf). The code [formal approximation](https://en.wikipedia.org/wiki/Abstract_interpretation) using [phase semantics](https://www.cs.arizona.edu/people/debray/Publications/metamorphic.pdf) should work but its result is also trivial: the fixed point is too coarse to analyze on. More practical approaches based on code [phases](https://www.semanticscholar.org/paper/Reverse-Engineering-Self-Modifying-Code-Unpacker-Debray-Patel/01e90e360114da419a98591c2b58ec54154d6a0b/pdf) or [waves](https://hal.inria.fr/hal-01257908/file/codisasm.pdf) cannot apply since they require that the code must be "stable" at some execution point. Recently, some authors classify such technique of code packing into [type VI](http://s3.eurecom.fr/docs/oakland15_packing.pdf), the most sophisticated class of binary code packers.
 
-  These properties make difficult for direct dynamic/concolic/static analysis, this binary is also a fine counterexample which invalidates hypothesis in current automated code deobfuscation methods. Low-hanging fruit approaches, e.g. black-box attack on counting number of executed instructions, seems not feasible: there is volume of more than 2.7 billion instructions must be passed before reaching the first "input sensitive" comparison
+  These properties make difficult for direct dynamic/concolic/static analysis, this binary is also a fine counterexample which invalidates hypothesis in current automated code deobfuscation methods. Low-hanging fruit approaches, e.g. black-box attack on counting number of executed instructions, seems not feasible: there is volume of more than 2.7 billion instructions must be passed before reaching the first "input sensitive" comparison.
 
 ## Workaround
 
@@ -102,13 +102,13 @@
 
 ### First phase
 
-  The dispatcher can be divided into "two phases" with "transition instructions" between: the second strictly [postdominances](https://en.wikipedia.org/wiki/Dominator_(graph_theory)) the transition code, whereas the transition strictly postdominances the first phase. This comes with the following control flow graph.
+  The dispatcher can be divided into "two phases" with "transition instructions" between: the second phase strictly [postdominances](https://en.wikipedia.org/wiki/Dominator_(graph_theory)) the transition code, whereas the transition strictly postdominances the first phase. This comes with the following control flow graph.
 
   ![First part of the dispatcher](./reven_first_part_dispatcher.svg)
 
 #### Return address table
 
-  As can be seen previously in the global CFG, the `ret` instruction at `0x40404e` will transfer the control flow to different basic blocks, but the continued instructions are not the ones following `call 0x404000`. The called function is then not a "standard" function which we normally observe in an [Algol-like language](http://c2.com/cgi/wiki?AlgolFamily): it does not return to the location following where it is called. The [returned address](https://en.wikipedia.org/wiki/Return-oriented_programming) must be modified somewhere.
+  As can be seen previously in the global CFG, the `ret` instruction at `0x40404e` will transfer the control flow to different basic blocks, but the continued instructions are not the ones following `call 0x404000`. The called function is then not a "standard" function which we normally observe in an [Algol-like language](http://c2.com/cgi/wiki?AlgolFamily): it does not return to the location following where it is called. The [return address](https://en.wikipedia.org/wiki/Return-oriented_programming) must be modified somewhere.
 
   **Return address modification:** 
   looking into instructions at `0x404005` and `0x404009`, we observe that the original return address is saved to the memory at `0x404056`, then the return address is overwritten by the instruction `mov [esp + 0x14], eax` at `0x404045`. This new address is computed from a loop between `0x404030` and `0x40403b`.
@@ -166,7 +166,7 @@
     0x404588; 0x404597; 0x4045a6; 0x4045b5; 0x4045c4; 0x4045d6; 0x4045e5; 0x4045f4; 0x404603; 0x404612; 
     0x404621; 0x404630; 0x40463f; 0x40464e; 0x40465d; 0x40466c; 0x40467b; 0x40468a; 0x404699; 0x4046a8
 
-  We can also check these addresses on the global control flow graph above, all of them terminates by an instruction `jmp 0x40428c` which transfers the control flow to the second phase of the dispatcher.
+  We can also check these addresses on the global control flow graph above, all of them terminates by an unconditional direct `jmp 0x40428c` which transfers the control flow to the second phase of the dispatcher.
 
 ### Second phase
 
@@ -176,7 +176,7 @@
  
 #### Return address modification
 
-  The second phase uses some similar tricks as the first one. The last instruction `ret` diverts also the control flow to different addresses, this is the effect of the instruction at `0x404208c` (which reverses a space for the return address), and one at `0x4042c2` (which fills the return address). From the global control flow graph, each return address commence an opcode handler.
+  The second phase uses some similar tricks as the first one. The last instruction `ret` diverts also the control flow to different addresses, this is the effect of the instruction at `0x404208c` (which reverses a space for the return address), and one at `0x4042c2` (which fills the return address). From the global control flow graph, each return address commences an opcode handler.
   
 #### Inter-phase encryption/decryption relation
 
@@ -190,9 +190,9 @@
   The `dword` consumed in the first phase comes from `0x404052`. Initially, when analyzing the first phase, we do not understand where the value at `0x404052` comes from; but now in the second phase we know that `0x404052` is used to store the value consumed by the two functions (c.f. the instruction at `0x4042bc`).
       
   **Code gadget encryption/decryption:**
-  so the pair of functions called in each phase consumes *the same value* to calculate an interval of address, then `xor` this interval with the string `IsThisTheFlag?`. The second phase then forwards the control flow to this `xor`ed code interval (which represents a code gadget). But `xor`ing with the same string will restore the original data. 
+  so the pair of functions called in each phase consumes *the same value* to calculate an interval of address, then `xor` this interval with the string `IsThisTheFlag?`. The second phase then forwards the control flow to this `xor`ed code interval (since the control flow is forwarded to each code interval by a `ret` instruction, we call it a [gadget](https://en.wikipedia.org/wiki/Return-oriented_programming)). We notice also that `xor`ing a gadget with the same string will restore the original data. 
   
-  By running several scenarios with different inputs, Reven confirms that *the code encryption/decryption happens only in the dispatcher*, the gadgets do not interfere in the code encryption/decryption. So the code gadget encryption/decryption mechanism of the dispatcher is pretty clear now, it is summarized in the following steps: 
+  By running several Reven's scenarios with different inputs, we observe that *the code modification happens only in the dispatcher*, the gadgets do not interfere in this process. The code gadget encryption/decryption mechanism of the dispatcher is pretty clear now, it is summarized in the following steps: 
   
     1. the first phase computes the last executed gadget from the stored entry point, next
     2. encrypts this gadget (`xor` with `IsThisTheFlag?`).
@@ -201,7 +201,7 @@
     5. decrypts this gadget (`xor` with `IsThisTheFlag?`), finally
     6. forwards the control flow to the entry point of the gadget.
     
-  **Remark:** *one should distinguish a gadget entry point from an original return address. A gadget is an interval address which is encrypted/decrypted as a whole, its entry points are addresses for which there are some control flow coming from another gadget. An original [return address](https://en.wikipedia.org/wiki/Return-oriented_programming) is naturally an entry point, but there are also entry points which are not a return address, a gadget may have several entry points, as we will show later.*
+  **Remark:** *one should distinguish a gadget entry point from an original return address. A gadget is an interval address which is encrypted/decrypted as a whole, its entry points are addresses for which there are some control flow coming from another gadget. An original return address is naturally an entry point, but there are also entry points which are not an original return address. As we will present later, a gadget may have several entry points, an original return address is the first address of a gadget - it is called the natural entry point of the gadget.*
     
   **Decrypting all code gadgets:** we can decrypt all gadgets now, that leads to statically decrypting all encrypted content of the binary. Indeed, given an original return address, we can compute the corresponding gadget, then decrypt the gadget by `xor`ing with `IsThisTheFlag?`. Moreover, all possible return addresses can be extracted by traversing the return address table: for each entry, extract its `return address` field. The list of all return addresses is:
   
@@ -305,17 +305,17 @@
     28   | 14       | 0        | ZF
     29   | 14       | 1        | ZF
     
-  That means if the value of `flag` is 16, then the conditional jumps depends on the result of the comparison between the carry flag with 0; if `flag` is 17 then the carry flag is compared with 1; etc. Interestingly, if the `flag` is 19, then the conditional jumps always take (because ).
+  Literally, if the value of `flag` is 16, then the conditional jumps depends on the result of the comparison between the carry flag with 0; if `flag` is 17 then the carry flag is compared with 1; etc. Interestingly, if the `flag` is 19, then the conditional jumps always takes.
   
-  **Next entry point calculation:** the address `next_e` of the next executed instruction has been calculated from the original return address `e` using the following algorithm:
+  **Next entry point calculation:** the address `nextExec` of the next executed instruction has been calculated from the original return address `e` using the following algorithm:
   
     let E be the corresponding entry of e in the return address table
     let fE = E.flag
     let r be the corresponding flag register of fE // see the flag comparison table above
     if fE % 2 = r then
-      next_e = E.next_return_address
+      nextExec = E.next_return_address
     else
-      next_e = e
+      nextExec = e
   
 ### Static control flow recovering
 
@@ -386,6 +386,6 @@
   It starts at `0x402048` (the blue basic block), and terminates at either `0x4023d4` (for `Yes!` result) or `0x40266e` (for `Nop!`). Well, this seems still quite sophisticated #:-S
   
   **Remark:**
-  *The control flow graph generated above is not only complete but also sound: there are no redundant control flow neither useless basic blocks. We can check on Reven that all instructions are executed.*
+  *The control flow graph generated above is not only complete but also sound: there are no redundant control flow (neither useless basic blocks so). We later check on Reven that all instructions are executed.*
 
 ## Reversing the second virtual machine
