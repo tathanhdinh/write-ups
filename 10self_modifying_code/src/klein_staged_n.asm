@@ -1,0 +1,64 @@
+;; This function implements the insertion sorting algorithm. The prototype of the
+;; function is:
+;;     void insertion(unsigned int length, uint64_t array[]);
+;;
+;; In the previous version (see klein_staged.asm), the self-modifying code is used
+;; to simplifying the array bound checking comparison. This technique is an simple
+;; illustration for "partial evaluation" where the known information is used to
+;; simplify the function.
+;;
+;; Another technique is to "pull" the computation back, so the function becomes more
+;; sophisticated. In this version, the self-modifying code is used to generate the
+;; instruction "je stop".
+
+global insertion
+
+section .tetrane alloc exec write
+
+insertion:
+  mov r11, 0x1                  ; i = 1
+
+;; concretize length
+  mov byte [rel forLoop + 3], dil
+  mov eax, [rel forLoop + 3]
+  cmp edi, 0x7f
+  cmovg eax, edi
+  mov [rel forLoop + 3], eax
+
+forLoop:
+  cmp r11, 0x0
+  mov rax, rax                  ; a buffer of 3 bytes in case of edi is greater than 0x7f
+
+  mov eax, 0xda894d90
+  mov ecx, 0xc03148c3
+  cmove eax, ecx
+  mov [rel $ + 6], eax
+  ; je stop
+
+  resb 4                        ; a buffer of 4 bytes to write code
+  ; mov r10, r11                  ; j = i
+
+whileLoop:
+  test r10, r10                 ; j > 0?
+  jz incrI
+
+  lea rax, [rsi + r10 * 0x8]
+  mov r9, [rax]                 ; tmp = buf[j]
+
+  cmp [rax - 0x8], r9           ; buf[j - 1] > buf[j]?
+  jbe incrI
+
+  mov rcx, [rax - 0x8]
+  mov [rax], rcx                ; buf[j] = buf[j - 1]
+  mov [rax - 0x8], r9           ; buf[j - 1] = tmp
+
+  dec r10                       ; j--
+
+  jmp whileLoop
+
+incrI:
+  inc r11
+  jmp forLoop
+
+stop:
+  ret

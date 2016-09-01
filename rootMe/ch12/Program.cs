@@ -159,6 +159,7 @@ namespace ch12
       }
       else {
         var fileName = args[0];
+        System.Console.WriteLine("Input file: %s", args[0]);
         extractGadget(fileName);
 
         foreach (var gadget in Gadgets)
@@ -186,7 +187,7 @@ namespace ch12
             System.Console.Write("{0:x2} ", byteValue);
           }
 
-          gadget.FindPassword();
+//          gadget.FindPassword();
 
           System.Console.WriteLine();
         }

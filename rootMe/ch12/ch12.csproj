@@ -1,4 +1,4 @@
-<?xml version="1.0" encoding="utf-8"?>
+﻿<?xml version="1.0" encoding="utf-8"?>
 <Project DefaultTargets="Build" ToolsVersion="4.0" xmlns="http://schemas.microsoft.com/developer/msbuild/2003">
   <PropertyGroup>
     <Configuration Condition=" '$(Configuration)' == '' ">Debug</Configuration>
@@ -30,13 +30,17 @@
     <PlatformTarget>x86</PlatformTarget>
   </PropertyGroup>
   <ItemGroup>
-    <Reference Include="System" />
     <Reference Include="ELFSharp">
-      <HintPath>..\..\elfsharp\ELFSharp\bin\Release\ELFSharp.dll</HintPath>
+      <HintPath>..\..\..\elfsharp\ELFSharp\bin\Release\ELFSharp.dll</HintPath>
     </Reference>
     <Reference Include="Microsoft.Z3">
-      <HintPath>..\..\..\Lab\z3-4.4.2.310c0f31a10b-x86-ubuntu-14.04\bin\Microsoft.Z3.dll</HintPath>
+      <HintPath>..\..\..\..\z3-4.4.1-x86-win\bin\Microsoft.Z3.dll</HintPath>
     </Reference>
+    <Reference Include="MiscUtil, Version=1.0.0.0, Culture=neutral, PublicKeyToken=d3c42c4bfacf7596, processorArchitecture=MSIL">
+      <HintPath>..\packages\JonSkeet.MiscUtil.0.1\lib\net35-Client\MiscUtil.dll</HintPath>
+      <Private>True</Private>
+    </Reference>
+    <Reference Include="System" />
   </ItemGroup>
   <ItemGroup>
     <Compile Include="Program.cs" />
@@ -45,5 +49,6 @@
   <Import Project="$(MSBuildBinPath)\Microsoft.CSharp.targets" />
   <ItemGroup>
     <None Include="app.config" />
+    <None Include="packages.config" />
   </ItemGroup>
 </Project>
