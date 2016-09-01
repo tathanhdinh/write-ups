@@ -86,15 +86,13 @@ namespace ch12
       return initVector;
 		}
 
-    public void FindPassword()
+    public void FindPassword(uint passwordLength)
     {
-      // password as 12 bitvectors of 8 bits
+      // password as bitvectors of 8 bits
       var z3Ctxt = new Microsoft.Z3.Context();
-      // var bv8Sort = z3Ctxt.MkBitVecSort(8);
-      Microsoft.Z3.BitVecExpr[] passwords = new Microsoft.Z3.BitVecExpr[0xc];
-      for (var i = 0; i < passwords.Length; i++) {
+      Microsoft.Z3.BitVecExpr[] passwords = new Microsoft.Z3.BitVecExpr[passwordLength];
+      for (var i = 0; i < passwordLength; i++) {
         var passwordNameI = "password" + i.ToString();
-        // passwords[i] = z3Ctxt.MkConst(passwordNameI, bv8Sort);
         passwords[i] = z3Ctxt.MkBVConst(passwordNameI, 8);
       }
 
@@ -106,7 +104,8 @@ namespace ch12
       // calculate gadget's symbolic content in mixing with the password
       var passwdIdx = 0;
       for (var i = 0; i < Content.Length; ++i) {
-        if (passwdIdx == 0xc) passwdIdx = 0;
+        if (passwdIdx == passwordLength) passwdIdx = 0;
+
         gadgetSymbolicContent[i] = z3Ctxt.MkBVSub(z3Ctxt.MkBVXOR(gadgetSymbolicContent[i],
                                                                  passwords[passwdIdx]), z3Ctxt.MkBV(0xaaU, 8));
         passwdIdx++;
@@ -154,17 +153,32 @@ namespace ch12
 
     public static void Main (string[] args)
     {
-      if (args.Length < 1) {
-        System.Console.WriteLine("Please give the input binary in the command line (e.g. ./ch12.exe inputFile)");
+      if (args.Length < 2)
+      {
+        System.Console.WriteLine("Please give the input binary and the password length in the command line (e.g. ./ch12.exe inputFile passwordLength)");
       }
-      else {
+      else
+      {
         var fileName = args[0];
-        System.Console.WriteLine("Input file: %s", args[0]);
+        var passwordLength = System.Convert.ToUInt32(args[1]);
+
+        System.Console.WriteLine("Input file: {0}", fileName);
+        System.Console.WriteLine("Try with password length: {0}", passwordLength);
+        System.Console.WriteLine();
+
         extractGadget(fileName);
+
+        //extractGadget("ch12");
 
         foreach (var gadget in Gadgets)
         {
           System.Console.WriteLine("address: 0x{0:x}, length: 0x{1:x}", gadget.Address, gadget.Length);
+          System.Console.Write("signature: ");
+          foreach (var byteValue in gadget.Signature)
+          {
+            System.Console.Write("{0:x2} ", byteValue);
+          }
+          System.Console.WriteLine();
 
           // foreach (var byteValue in gadget.Content) {
           //   System.Console.Write("{0:x2} ", byteValue);
@@ -177,17 +191,19 @@ namespace ch12
           // }
 
           // var password = new byte[] { 'a', 'z', 'e', 'r', 't', 'y' };
-          gadget.MixWithPassword(System.Text.Encoding.ASCII.GetBytes("azerty"));
+          //gadget.MixWithPassword(System.Text.Encoding.ASCII.GetBytes("azerty"));
           // foreach (var byteValue in gadget.Content) {
           //   System.Console.Write("{0:x2} ", byteValue);
           // }
 
-          var mixSignature = gadget.GetSelfEncryptedArray();
-          foreach (var byteValue in mixSignature) {
-            System.Console.Write("{0:x2} ", byteValue);
-          }
+          //var mixSignature = gadget.GetSelfEncryptedArray();
+          //foreach (var byteValue in mixSignature)
+          //{
+          //  System.Console.Write("{0:x2} ", byteValue);
+          //}
+          //System.Console.WriteLine();
 
-//          gadget.FindPassword();
+          gadget.FindPassword(passwordLength);
 
           System.Console.WriteLine();
         }
