@@ -1,0 +1,29 @@
+﻿
+Microsoft Visual Studio Solution File, Format Version 12.00
+# Visual Studio 2012
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "ch12", "ch12\ch12.csproj", "{B9B69AFD-FE6B-4DC7-8F7C-DA96B2A92B4D}"
+EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "readelf", "readelf\readelf.csproj", "{AE13799D-D4D9-4E0C-A13C-091B62DD6664}"
+EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "rv0", "rv0\rv0.csproj", "{5F3218F5-D0A6-4E03-BE0D-6D8BA4EC81E3}"
+EndProject
+Global
+	GlobalSection(SolutionConfigurationPlatforms) = preSolution
+		Debug|x86 = Debug|x86
+		Release|x86 = Release|x86
+	EndGlobalSection
+	GlobalSection(ProjectConfigurationPlatforms) = postSolution
+		{5F3218F5-D0A6-4E03-BE0D-6D8BA4EC81E3}.Debug|x86.ActiveCfg = Debug|x86
+		{5F3218F5-D0A6-4E03-BE0D-6D8BA4EC81E3}.Debug|x86.Build.0 = Debug|x86
+		{5F3218F5-D0A6-4E03-BE0D-6D8BA4EC81E3}.Release|x86.ActiveCfg = Release|x86
+		{5F3218F5-D0A6-4E03-BE0D-6D8BA4EC81E3}.Release|x86.Build.0 = Release|x86
+		{AE13799D-D4D9-4E0C-A13C-091B62DD6664}.Debug|x86.ActiveCfg = Debug|x86
+		{AE13799D-D4D9-4E0C-A13C-091B62DD6664}.Debug|x86.Build.0 = Debug|x86
+		{AE13799D-D4D9-4E0C-A13C-091B62DD6664}.Release|x86.ActiveCfg = Release|x86
+		{AE13799D-D4D9-4E0C-A13C-091B62DD6664}.Release|x86.Build.0 = Release|x86
+		{B9B69AFD-FE6B-4DC7-8F7C-DA96B2A92B4D}.Debug|x86.ActiveCfg = Debug|x86
+		{B9B69AFD-FE6B-4DC7-8F7C-DA96B2A92B4D}.Debug|x86.Build.0 = Debug|x86
+		{B9B69AFD-FE6B-4DC7-8F7C-DA96B2A92B4D}.Release|x86.ActiveCfg = Release|x86
+		{B9B69AFD-FE6B-4DC7-8F7C-DA96B2A92B4D}.Release|x86.Build.0 = Release|x86
+	EndGlobalSection
+EndGlobal

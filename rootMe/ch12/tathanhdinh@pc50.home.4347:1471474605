@@ -1,0 +1,21 @@
+﻿// using System;
+
+namespace ch12
+{
+	class Program
+	{
+		public static void Main (string[] args)
+		{
+      if (args.Length < 1) {
+        System.Console.WriteLine("Please give the input binary in the command line (e.g. ./ch12 inputFile)");
+      }
+      else {
+        var elfReader32 = ELFSharp.ELF.ELFReader.Load<uint>(args[0]);
+				var segments = elfReader32.Segments;
+				foreach (var seg in segments) {
+					System.Console.WriteLine("segment {0}: 0x{1:x}", seg.Type.ToString(), seg.Address);
+				}
+      }
+		}
+	}
+}
