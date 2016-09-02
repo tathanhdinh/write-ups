@@ -58,18 +58,19 @@ namespace ch12
       if (Content.Length == 0) throw new System.IndexOutOfRangeException("Cannot read gadget content");
     }
 
-    public void MixWithPassword(byte[] password)
+    public void MixWithPassword(string password)
     {
+      // var passwordArray System.Text.Encoding.ASCII.GetBytes(samplePassword)
       var passwdIdx = 0;
       for (var i = 0; i < Content.Length; i++) {
         if (passwdIdx == password.Length) passwdIdx = 0;
-        Content[i] = (byte)((Content[i] ^ password[passwdIdx]) - 0xaa);
+        Content[i] = (byte)((Content[i] ^ password[passwdIdx]) - 0xaaU);
         passwdIdx++;
       }
     }
 
-		public byte[] GetSelfEncryptedArray()
-		{
+    public byte[] GetSelfEncryptedArray()
+    {
       // zeroing initVector
       var initVector = new byte[0xc];
       System.Array.Clear(initVector, 0, 0xc);
@@ -84,7 +85,7 @@ namespace ch12
       }
 
       return initVector;
-		}
+    }
 
     public void FindPassword(uint passwordLength)
     {
@@ -106,12 +107,14 @@ namespace ch12
       for (var i = 0; i < Content.Length; ++i) {
         if (passwdIdx == passwordLength) passwdIdx = 0;
 
-        gadgetSymbolicContent[i] = z3Ctxt.MkBVSub(z3Ctxt.MkBVXOR(gadgetSymbolicContent[i],
-                                                                 passwords[passwdIdx]), z3Ctxt.MkBV(0xaaU, 8));
+        gadgetSymbolicContent[i] = z3Ctxt.MkBVSub(z3Ctxt.MkBVXOR(gadgetSymbolicContent[i], passwords[passwdIdx]),
+          z3Ctxt.MkBV(0xaaU, 8));
+
+        // System.Console.WriteLine("{0}", gadgetSymbolicContent[i].ToString());
         passwdIdx++;
       }
 
-      // calculate self-encrypted vector
+      // calculate self-scrambing vector
       var encryptedVector = new Microsoft.Z3.BitVecExpr[0xc];
       for (var i = 0; i < 0xc; ++i) {
         encryptedVector[i] = z3Ctxt.MkBV(0x0U, 8);
@@ -120,21 +123,49 @@ namespace ch12
       foreach (var bv in gadgetSymbolicContent) {
         if (vectorIdx == 0xc) vectorIdx = 0x0;
         encryptedVector[vectorIdx] = z3Ctxt.MkBVXOR(encryptedVector[vectorIdx], bv);
+        // System.Console.WriteLine("{0}", encryptedVector[vectorIdx].ToString());
         vectorIdx++;
       }
 
       // generate conditions
-      var bvConds = new Microsoft.Z3.BoolExpr[0xc];
+      var bvCheckingConds = new Microsoft.Z3.BoolExpr[0xc];
       for (var i = 0; i < 0xc; ++i) {
-        bvConds[i] = z3Ctxt.MkEq(encryptedVector[i], z3Ctxt.MkBV(Signature[i], 8));
+        bvCheckingConds[i] = z3Ctxt.MkEq(encryptedVector[i], z3Ctxt.MkBV(Signature[i], 8));
+        // System.Console.WriteLine("{0}", bvCheckingConds[i].ToString());
       }
       // bvConds.Aggregate(z3Ctxt.MkAnd);
 
-      // var aggrCond = z3Ctxt.MkAnd(bvConds);
-      var z3Solver = z3Ctxt.MkSolver("QF_ABV");
-      z3Solver.Assert(bvConds);
+      var asciiConds = new Microsoft.Z3.BoolExpr[passwordLength];
+      for (var i = 0; i < asciiConds.Length; ++i) {
+        asciiConds[i] = z3Ctxt.MkAnd(z3Ctxt.MkBVUGE(passwords[i], z3Ctxt.MkBV(0x21, 8)),
+          z3Ctxt.MkBVULE(passwords[i], z3Ctxt.MkBV(0x7e, 8)));
+        // System.Console.WriteLine("{0}", asciiConds[i].ToString());
+      }
 
-      System.Console.WriteLine(z3Solver.Check());
+      var allConds = new Microsoft.Z3.BoolExpr[bvCheckingConds.Length + asciiConds.Length];
+      System.Array.Copy(bvCheckingConds, allConds, bvCheckingConds.Length);
+      System.Array.Copy(asciiConds, 0, allConds, bvCheckingConds.Length, asciiConds.Length);
+
+      // System.Console.WriteLine("{0}", z3Ctxt.MkAdd(allConds));
+
+      // System.Console.WriteLine("condition expression: {0}", allConds.ToString());
+
+      // var aggrCond = z3Ctxt.MkAnd(bvConds);
+      var z3Solver = z3Ctxt.MkSolver("QF_BV");
+      z3Solver.Assert(allConds);
+
+      var gadgetSmtFile = new System.IO.StreamWriter(Address.ToString() + ".smt2");
+      gadgetSmtFile.WriteLine("(set-logic QF_BV)");
+      gadgetSmtFile.WriteLine("(set-info :smt-lib-version 2.0)");
+      gadgetSmtFile.WriteLine(z3Solver.ToString());
+      gadgetSmtFile.WriteLine("(check-sat)");
+      gadgetSmtFile.Close();
+
+      // System.Console.WriteLine("{0}", z3Solver.ToString());
+
+      // var result = z3Solver.Check();
+      // System.Console.WriteLine("{0}", result);
+      // if (System.String.Equals(result, "UNSATISFIABLE", System.StringComparison.OrdinalIgnoreCase) return;
     }
   };
 
@@ -155,18 +186,18 @@ namespace ch12
     {
       if (args.Length < 2)
       {
-        System.Console.WriteLine("Please give the input binary and the password length in the command line (e.g. ./ch12.exe inputFile passwordLength)");
+        System.Console.WriteLine("Not correct syntax (e.g. ./ch12.exe samplePassword passwordLength)");
       }
       else
       {
-        var fileName = args[0];
+        var samplePassword = args[0];
         var passwordLength = System.Convert.ToUInt32(args[1]);
 
-        System.Console.WriteLine("Input file: {0}", fileName);
+        System.Console.WriteLine("Sample password: {0}", samplePassword);
         System.Console.WriteLine("Try with password length: {0}", passwordLength);
         System.Console.WriteLine();
 
-        extractGadget(fileName);
+        extractGadget("ch12");
 
         //extractGadget("ch12");
 
@@ -191,21 +222,23 @@ namespace ch12
           // }
 
           // var password = new byte[] { 'a', 'z', 'e', 'r', 't', 'y' };
-          //gadget.MixWithPassword(System.Text.Encoding.ASCII.GetBytes("azerty"));
+          // gadget.MixWithPassword(System.Text.Encoding.ASCII.GetBytes(samplePassword));
+          // gadget.MixWithPassword(samplePassword);
           // foreach (var byteValue in gadget.Content) {
           //   System.Console.Write("{0:x2} ", byteValue);
           // }
 
-          //var mixSignature = gadget.GetSelfEncryptedArray();
-          //foreach (var byteValue in mixSignature)
-          //{
+          // var mixSignature = gadget.GetSelfEncryptedArray();
+          // System.Console.Write("scrambled: ");
+          // foreach (var byteValue in mixSignature)
+          // {
           //  System.Console.Write("{0:x2} ", byteValue);
-          //}
-          //System.Console.WriteLine();
+          // }
+          // System.Console.WriteLine();
 
           gadget.FindPassword(passwordLength);
 
-          System.Console.WriteLine();
+          // System.Console.WriteLine();
         }
 
         // var elfReader32 = ELFSharp.ELF.ELFReader.Load<uint>(args[0]);
