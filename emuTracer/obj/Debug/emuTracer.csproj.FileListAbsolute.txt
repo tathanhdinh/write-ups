@@ -1,0 +1,2 @@
+C:\Users\Ta Thanh Dinh\Documents\GitHub\write-ups\emuTracer\bin\Debug\emuTracer.exe.config
+C:\Users\Ta Thanh Dinh\Documents\GitHub\write-ups\emuTracer\obj\Debug\emuTracer.csprojResolveAssemblyReference.cache

@@ -43,10 +43,10 @@ namespace oneway
       z3Solver.Assert(allConds);
 
       var result = z3Solver.Check();
-      Console.WriteLine("{0}", result.ToString());
+      Console.Write("{0}", result.ToString());
       if (result == Microsoft.Z3.Status.SATISFIABLE)
       {
-        Console.Write("Password: ");
+        Console.Write("\nPassword: ");
         var model = z3Solver.Model;
         foreach (var passChar in passwordChars)
         {
@@ -64,7 +64,7 @@ namespace oneway
       else
       {
         var passwordLength = System.Convert.ToUInt32(args[0]);
-        Console.WriteLine("Try with password length: {0}", passwordLength);
+        Console.Write("Try with password length: {0}... ", passwordLength);
         FindPassword(passwordLength);
       }
     }

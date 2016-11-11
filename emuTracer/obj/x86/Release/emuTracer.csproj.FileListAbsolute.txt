@@ -1,0 +1,14 @@
+C:\Users\Ta Thanh Dinh\Documents\GitHub\write-ups\emuTracer\bin\x86\Release\emuTracer.exe.config
+C:\Users\Ta Thanh Dinh\Documents\GitHub\write-ups\emuTracer\bin\x86\Release\emuTracer.exe
+C:\Users\Ta Thanh Dinh\Documents\GitHub\write-ups\emuTracer\bin\x86\Release\emuTracer.pdb
+C:\Users\Ta Thanh Dinh\Documents\GitHub\write-ups\emuTracer\bin\x86\Release\Gee.External.Capstone.dll
+C:\Users\Ta Thanh Dinh\Documents\GitHub\write-ups\emuTracer\bin\x86\Release\UnicornManaged.dll
+C:\Users\Ta Thanh Dinh\Documents\GitHub\write-ups\emuTracer\bin\x86\Release\FSharp.Core.dll
+C:\Users\Ta Thanh Dinh\Documents\GitHub\write-ups\emuTracer\bin\x86\Release\Gee.External.Capstone.pdb
+C:\Users\Ta Thanh Dinh\Documents\GitHub\write-ups\emuTracer\bin\x86\Release\UnicornManaged.pdb
+C:\Users\Ta Thanh Dinh\Documents\GitHub\write-ups\emuTracer\bin\x86\Release\UnicornManaged.xml
+C:\Users\Ta Thanh Dinh\Documents\GitHub\write-ups\emuTracer\bin\x86\Release\FSharp.Core.xml
+C:\Users\Ta Thanh Dinh\Documents\GitHub\write-ups\emuTracer\bin\x86\Release\fr\FSharp.Core.resources.dll
+C:\Users\Ta Thanh Dinh\Documents\GitHub\write-ups\emuTracer\obj\x86\Release\emuTracer.csprojResolveAssemblyReference.cache
+C:\Users\Ta Thanh Dinh\Documents\GitHub\write-ups\emuTracer\obj\x86\Release\emuTracer.exe
+C:\Users\Ta Thanh Dinh\Documents\GitHub\write-ups\emuTracer\obj\x86\Release\emuTracer.pdb

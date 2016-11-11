@@ -6,3 +6,11 @@ C:\Users\Ta Thanh Dinh\Documents\GitHub\oneway\bin\Release\Microsoft.Z3.xml
 C:\Users\Ta Thanh Dinh\Documents\GitHub\oneway\bin\Release\libz3.dll
 C:\Users\Ta Thanh Dinh\Documents\GitHub\oneway\obj\Release\oneway.exe
 C:\Users\Ta Thanh Dinh\Documents\GitHub\oneway\obj\Release\oneway.pdb
+C:\Users\Ta Thanh Dinh\Documents\GitHub\write-ups\oneway\bin\Release\oneway.exe.config
+C:\Users\Ta Thanh Dinh\Documents\GitHub\write-ups\oneway\obj\Release\oneway.exe
+C:\Users\Ta Thanh Dinh\Documents\GitHub\write-ups\oneway\obj\Release\oneway.pdb
+C:\Users\Ta Thanh Dinh\Documents\GitHub\write-ups\oneway\bin\Release\oneway.exe
+C:\Users\Ta Thanh Dinh\Documents\GitHub\write-ups\oneway\bin\Release\oneway.pdb
+C:\Users\Ta Thanh Dinh\Documents\GitHub\write-ups\oneway\bin\Release\Microsoft.Z3.xml
+C:\Users\Ta Thanh Dinh\Documents\GitHub\write-ups\oneway\bin\Release\libz3.dll
+C:\Users\Ta Thanh Dinh\Documents\GitHub\write-ups\oneway\obj\Release\oneway.csprojResolveAssemblyReference.cache
