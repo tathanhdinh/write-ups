@@ -3,8 +3,11 @@ using System.Collections.Generic;
 using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
-//using UnicornManaged;
-//using Gee.External.Capstone;
+
+using UnicornManaged;
+using UnicornManaged.Const;
+using Gee.External.Capstone;
+using Gee.External.Capstone.X86;
 
 namespace emuTracer
 {
@@ -12,14 +15,73 @@ namespace emuTracer
   {
     static void Main(string[] args)
     {
-      using (var uce = new UnicornManaged.Unicorn(UnicornManaged.Const.Common.UC_ARCH_X86, UnicornManaged.Const.Common.UC_MODE_32))
-      using (var disasm = Gee.External.Capstone.CapstoneDisassembler.CreateX86Disassembler(Gee.External.Capstone.DisassembleMode.Bit32))
+      using (var uce = new Unicorn(Common.UC_ARCH_X86, Common.UC_MODE_32))
+      using (var disasm = CapstoneDisassembler.CreateX86Disassembler(Gee.External.Capstone.DisassembleMode.Bit32))
       {
-        // memory mapping
-        uce.MemMap(0x804a117, 2 * 1024 * 1024, UnicornManaged.Const.Common.UC_PROT_ALL);
+        Int64 address = 0x804a117;
 
-        // initialize registers
+        try
+        {
+          // initialize memory
+          uce.MemMap(address, 2 * 1024 * 1024, Common.UC_PROT_ALL);
+
+          // // initialize registers
+          // uce.RegWrite (X86.UC_X86_REG_EAX, 0xffc57f54);
+          // uce.RegWrite (X86.UC_X86_REG_EBX, 0x0);
+          // uce.RegWrite (X86.UC_X86_REG_ECX, 0xffc57ec0);
+          // uce.RegWrite (X86.UC_X86_REG_EDX, 0xffc57ee4);
+          // uce.RegWrite (X86.UC_X86_REG_ESI, 0x2);
+          // uce.RegWrite (X86.UC_X86_REG_EDI, 0xf74c7000);
+          // uce.RegWrite (X86.UC_X86_REG_EBP, 0xffc57ea8);
+          // uce.RegWrite (X86.UC_X86_REG_ESP, 0xffc57e8c);
+          // uce.RegWrite (X86.UC_X86_REG_EFLAGS, 0x292);
+
+          // // code
+          // Byte[] code = { 0x8B, 0x0C, 0x24, 0x89, 0xCA, 0x83, 0xE9, 0x04, 0x8B,
+          //   0x09, 0x01, 0xD1, 0x89, 0x49, 0x04, 0x89, 0x11, 0x31, 0x09, 0x31, 0x49, 0x19, 0x89, 0x34, 0x24,
+          //   0x9C, 0xD5, 0x20, 0x0C, 0x89, 0x5C, 0x24, 0x04, 0x31, 0x41, 0x16, 0x89, 0xCB, 0xBA, 0xED, 0xC8,
+          //   0xFE, 0xDE, 0x31, 0x53, 0xDC, 0xFC, 0x8D, 0x43, 0x04, 0xB0, 0x90, 0x8D, 0x7B, 0x04, 0xB9, 0x2E,
+          //   0x00, 0x00, 0x00, 0xF3, 0xAA, 0x31, 0xC0, 0x66, 0x31, 0x5B, 0x3E, 0xAC, 0x83, 0xC3, 0x5C, 0x66,
+          //   0x31, 0x1B, 0xC6, 0x83, 0xA5, 0xFE, 0xFF, 0xFF, 0x33, 0x8A, 0x8C, 0x18, 0xA5, 0xFE, 0xFF, 0xFF,
+          //   0x88, 0x4B, 0x01, 0x98, 0xA1, 0x66, 0x31, 0x5B, 0x06, 0x15, 0x90, 0x1B, 0x66, 0x31, 0x5B, 0x06,
+          //   0x89, 0xD1, 0x29, 0xC1, 0x01, 0xD0, 0x31, 0xC8, 0x83, 0xEB, 0x5C, 0x89, 0xD1, 0x83, 0xE1, 0x0F,
+          //   0x8D, 0x4C, 0x19, 0x04, 0x66, 0xC7, 0x41, 0x04, 0x01, 0xC2, 0xC7, 0x41, 0x06, 0xC1, 0xC2, 0x08,
+          //   0x90, 0x66, 0x31, 0x5B, 0x3E, 0xEB, 0xFF, 0xE1, 0x83, 0xEB, 0x5C, 0x31, 0x1B, 0x89, 0xD0, 0x5E,
+          //   0x8B, 0x5C, 0x24, 0x04, 0x31, 0x9B, 0x9D, 0x00, 0x00, 0x00, 0xFF, 0x25, 0x17, 0xA1, 0x04, 0x08,
+          //   0x00, 0x00, 0x00, 0x00
+          // };
+
+          // // memory mapping
+          // uce.MemWrite(address, code);
+
+          // // tracing
+          // uce.AddCodeHook((uc, addr, size, userData) => CodeHookCallback(disasm, uc, addr, size, userData), 1, 0);
+
+          // // emulate
+          // uce.EmuStart(address, address + code.Length, 0u, 0u);
+        }
+        catch (UnicornEngineException ex)
+        {
+          Console.WriteLine("{0}", ex);
+        }
       }
+    }
+
+    private static void CodeHookCallback(
+      CapstoneDisassembler<X86Instruction, X86Register, X86InstructionGroup, X86InstructionDetail> disasm, Unicorn uce, Int64 addr, Int32 size, Object userData)
+    {
+      var eipBuffer = new Byte[4];
+      uce.RegRead(X86.UC_X86_REG_EIP, eipBuffer);
+      var eip = eipBuffer[0] + eipBuffer[1] << 8 + eipBuffer[2] << 16 + eipBuffer[3] << 24;
+
+      var insBuffer = new Byte[size];
+      uce.MemRead(addr, insBuffer);
+
+      var insDisas = disasm.Disassemble(insBuffer, 1)[0];
+
+      Console.WriteLine("{0:0x}  {1}", eip, insDisas);
+
+      return;
     }
   }
 }
