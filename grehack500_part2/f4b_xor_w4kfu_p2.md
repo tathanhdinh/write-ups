@@ -9,7 +9,7 @@ Slug: reversing-f4b-challenge-part1
 
 ## Loops analysis ##
 
-  It is quite direct to recognize [natural loops][1] in this graph. Indeed, there are *back edges* 
+  It is quite direct to recognize [natural loops][1] in this graph. Indeed, the entry point basic block is also the root of the dominator tree; there are *back edges*, for example, from the basic block starting at `0x402460` to the entry point, or from one at `0x402513` to the entry point, etc. These back edges from natural loops which have a common header, which is the entry point basic block, then can be combined into a single natural loop. There are also some *nested loops*
 
 [1]: sdfds "sdf"
 
