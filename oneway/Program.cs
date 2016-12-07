@@ -64,7 +64,7 @@ namespace oneway
       else
       {
         var passwordLength = System.Convert.ToUInt32(args[0]);
-        Console.Write("Try with password length: {0}... ", passwordLength);
+        Console.Write("Trying with password length: {0}... ", passwordLength);
         FindPassword(passwordLength);
       }
     }
