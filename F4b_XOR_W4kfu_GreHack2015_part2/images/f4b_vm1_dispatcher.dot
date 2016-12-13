@@ -56,4 +56,5 @@ digraph G {
   4 -> 5 [label="", style="solid"];
   5 -> 6 [label="", style="solid"];
   6 -> 7 [label="", style="dashed"];
+  7 -> 0 [label="", style="dotted"];
 }

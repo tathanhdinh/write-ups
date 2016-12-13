@@ -26,14 +26,14 @@
 
 ### Dispatcher ###
 
-  Let's consider the higher basic blocks and their control flow, consisting of in the following control flow graph (for comprehension purpose, we have omitted `nop` instructions, also we have split the basic block), they form a [region](http://digital.cs.usu.edu/~allan/AdvComp/Notes/controld/controld.html) whose the header is the block at `0x402048`, there is even a unique exit block at `0x402096`. This is an useful property since we can safely isolate the [data-flow analysis](https://en.wikipedia.org/wiki/Data-flow_analysis) on these blocks from other parts of the program.
+  Let's consider the higher basic blocks and their control flow, consisting of in the following control flow graph. They form a [region](http://digital.cs.usu.edu/~allan/AdvComp/Notes/controld/controld.html) whose the header is the block at `0x402048`, there is even a unique exit block at `0x402096`. This is an useful property since we can safely isolate the [data-flow analysis](https://en.wikipedia.org/wiki/Data-flow_analysis) on these blocks from other parts of the program.
 
   <a name="dispatchercfg">
   ![Dispatcher](images/f4b_vm1_dispatcher.svg)
   </a>
   
   **Remark:**
-  *for comprehension purpose, we have omitted `nop`(s) from basic blocks; also the instruction `test ebx, ...` is split from the exit block, so it is not included in the region*
+  *for comprehension purpose, we have omitted `nop`(s) from basic blocks; the instruction `test ebx, ...` is split from the exit block, so it is not included in the region. We have added also a "pseudo" back-edge from the lowest block to the entry point to imply that the dispatcher is executed through a loop.*
 
   Indeed, we observe that this region accesses `5` different memory addresses: `0x403041` (byte access), `0x403ca7` (byte access), `0x403042` (word access), `0x40268b` (double word access). Moreover, a simple [liveness analysis](https://en.wikipedia.org/wiki/Live_variable_analysis) shows that all accessed registers are *dead* before entering the header block; except `ebx`, they are also *dead* when going out the exit block. Consequently, the region is completely "parameterized" by values at these memory addresses.
 
@@ -119,7 +119,11 @@
   
 #### Multitasking ####
 
-  We need understand how virtual machines switch execution. Considering first the instructions at `0x402048`, `0x40204d` and `0x40204d` in the [previous slice](#opcodetableslice), we notice that if the value of `al` at `0x404568` is not `5` then 
+  We notice that if the value of `al` at the instruction at `0x404568` is not `5` then the bit-level offset (i.e. the instruction pointer) is not extracted (resp. updated) from (resp. to) the instruction pointer table (i.e. `word` array at `0x403048`), it is simply increased when extracting data from the corresponding opcode table. Since `al` is assigned by the `byte` value at `0x403041`, slicing the dispatcher with respect to this `byte`, we have the following control flow graph:
+  
+  ![VM's time slicing](images/f4b_vm_time_slice.svg)
+  
+  We need understand how virtual machines switch execution. Considering first the instructions at `0x402048`, `0x40204d` and `0x40204d` in the [previous slice](#opcodetableslice), if the value of `al` at `0x404568` is not `5` then 
   
   In summary, we have the following pseudo-code illustrating the semantics of the region:
   
