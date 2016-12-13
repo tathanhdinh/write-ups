@@ -43,7 +43,7 @@ digraph G {
 
   7 [
     fontname="Source Code Pro",
-    fontsize=12, shape=box, style=rounded,
+    fontsize=12, shape=box, style="rounded,dotted",
     label="0x4020c7  test ebx, 0xc0000000\l"
   ]
 

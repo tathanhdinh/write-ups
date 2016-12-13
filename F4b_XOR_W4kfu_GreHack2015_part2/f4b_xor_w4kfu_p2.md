@@ -54,28 +54,75 @@
     
   As explained in the comments above, given some offset `i` in bits, the sequence extracts a `dword` in a byte array from the **bit-offset** `i`, the extracted value is rounded to `2^(i % 8)`. 
   
+  This bit-level data extracting pattern is repeated at other blocks, the control flow is diverted by `test ebx, ...` instructions depending on the extracted value. More concretely, for each "kind" of the extracted data, there is a unique corresponding operator that is consisted in a single block (e.g. ones at `0x402250`, `0x40263c`, etc.), or in several blocks (e.g. one consisted of blocks at `0x404d6`, `0x402572`, `0x402573`, `0x404331`, etc.). That is a "strong" indication of a virtual machine.
   
-#### Multitasking virtual machine ####
+  
+<!-- #### Multitasking virtual machine #### -->
+#### Opcode tables ####
 
-  This bit-level data extracting sequence above is repeated at lower blocks, and the control flow is diverted by `test ebx, ...` instructions depending on the extracted value. More concretely, for each "kind" of the extracted data, there is a unique corresponding operator that is consisted in a single block (e.g. ones at `0x402250`, `0x40263c`, etc.), or in several blocks (e.g. one consisted of blocks at `0x404d6`, `0x402572`, `0x402573`, `0x404331`, etc.)
-  
-  Noticing that the bit-offset is stored as a `word` value at `0x403042`. Moreover, the base address of the array where the data at a given bit-offset is extracted is indexed by `eax` in a `dword` array at `0x40268b`:
+  We now examine the array where bit-level data is extracted (i.e. the opcode table). First, noticing that the bit-offset is typed as `word` value at `0x403042`. Moreover, the address of the opcode table is indexed by `eax` in a `dword` array at `0x40268b`:
   
     0x4020a0  mov ebx, dword ptr [eax+0x40268b]
     
   whereas `eax` is calculated by:
   
-    0x402096  movzx eax, byte ptr [0x403ca0]
+    0x402096  movzx eax, byte ptr [0x403ca7]
     0x40209d  shl eax, 0x2
     
-  Examining on REVEN-Axion the [memory access](#memaccess403ca0) at `0x403ca7`, we observe that the `byte` value stored at this address is *periodically increased* from `0` to `6`. This fact is statically verified by observing the increment of `al` at `0x4046a8` on the [control flow graph](#dispatchercfg) of the dispatcher.
+  Examining on REVEN-Axion the [memory access](#memaccess403ca0) at `0x403ca7`, we observe that the `byte` value stored at this address is *periodically increased* from `0` to `6` (we call it opcode table `ID`):
+  
+    0, 1, 2, 3, 4, 5, 6, 0, 1, 2, 3, 4,...
   
   <a name="memaccess403ca7">
   ![Memory access at `0x403ca7`](images/proc_time_slice_counter.png)
   </a>
   
+  and when examining corresponding `dword`(s) starting at `0x40268b`, we receive the following values:
+  
+    0x403c32, 0x40365b, 0x403056, 0x403598, 0x403121, 0x403d88, 0x403000
+  
+  <a name="opcodetable">
+  ![Opcode tables](images/opcode_tables.png)
+  </a>
+  
+  each is the base address of an opcode table, so we get `7` different tables!!! Well, a virtual machine with multiple opcode tables, that's nice :-)
+  
+  **Remark:**
+  The periodic increment from `0` to `6` of the opcode table index can be also *verified* by observing the following slice obtained by statically [slicing](https://en.wikipedia.org/wiki/Program_slicing) the [dispatcher](#dispatchercfg) with respect to the point of interest at `0x402096` and the value of `eax`.
+  
+  <a name="opcodetableslice">
+  ![Slice of the dispatchercfg](images/f4b_opcode_table_slice.svg)
+  </a>
+  
+#### Instruction pointers ####
+  
+  As examined [above](#bit-level-access), in extracting data at each opcode table, the bit-level offset is read as a `word` at `0x403042`:
+  
+    0x4020a6  mov ax, word ptr [0x403042]
+    
+  moreover, we observe that this value is indexed also by the ID of the opcode table in a `word` array at `0x403048`:
+  
+    0x402081  mov byte ptr [0x403ca7], al      ; table ID
+    0x402086  shl eax, 0x1
+    0x402088  mov bx, word ptr [eax+0x403048]  ; bit-level offset
+    0x40208f  mov word ptr [0x403042], bx
+    
+  Also, this is nothing surprising (the dispatcher is not obfuscated, fortunately :-)) that this offset is updated back to the array by:
+  
+    0x40205f  movzx eax, byte ptr [0x403ca7]   ; table ID
+    0x402066  mov bx, word ptr [0x403042]      ; bit-level offset
+    0x40206d  movzx ecx, al
+    0x402070  shl cl, 0x1
+    0x402072  mov word ptr [ecx+0x403048], bx  ; update
+  
+  So for each opcode table ID, we have a pair of `(opcode table, bit-level offset)`. Noticing that each offset can be interpreted as the "instruction pointer" of a virtual machine, that means there are indeed `7` **concurrent virtual machines** (corresponding with `ID`(s) from `0` to `6`), each has its own code and instruction pointer, and they share the same dispatcher and opcode handlers.
+  
+#### Multitasking ####
+
+  We need understand how virtual machines switch execution. Considering first the instructions at `0x402048`, `0x40204d` and `0x40204d` in the [previous slice](#opcodetableslice), we notice that if the value of `al` at `0x404568` is not `5` then 
+  
   In summary, we have the following pseudo-code illustrating the semantics of the region:
   
     let opcode_extract (time_slice: uint8 byref) (proc_id: uint8 byref) (proc_ip: uint16 byref) ()
 
-[1]: Aho, A. V. et al. Compilers: Principles, Techniques, and Tools, 3rd Edition.
+
