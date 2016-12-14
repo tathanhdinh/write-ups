@@ -11,12 +11,12 @@
 
   It is quite direct to identify [natural loops](https://en.wikipedia.org/wiki/Control_flow_graph) this graph. Indeed, the entry point block is also the root of the *dominator tree*; there are *back-edges*, e.g. from the basic block starting at `0x402460` to the entry point, or from one at `0x402513` to the entry point, etc. These back edges form natural loops which have a common *header* (that is the entry point), then can be combined into a single natural loop. There are also some *nested loops*, e.g. one having the basic block `0x4044d6` as its header and `0x404331 -> 0x4044d6` as its back-edge.
 
-  Since the program terminates by calling `ExitProcess` either at the block `0x4023d4` or `0x40266e` (respectively for `Nop` or `Yes!`), also the exit block (i.e. one at `0x40235`) *post-dominates* these terminating blocks. That means we can "add" two pseudo back-edges `0x4023d4 -> 0x402048` and `0x40266e -> 0x402048` without changing the semantics of the program. Consequently, the program can be interpreted as a single "high-level" `while (true)` loop, with several loops nested within.
+  The program terminates by calling `ExitProcess` either at the block `0x4023d4` or `0x40266e` (respectively for `Nop` or `Yes!`), moreover the exit block (i.e. one at `0x40235`) *post-dominates* these terminating blocks. For comprehension purpose, we can "add" pseudo back-edges `0x4023d4 -> 0x402048` and `0x40266e -> 0x402048` without changing the semantics of the program. Consequently, it can be interpreted as a single "high-level" `while (true)` loop, with several loops nested within.
 
   <!-- **Remark:** -->
   <!-- Some properties about the dominance relation between basic blocks can be quickly checked on Reven-Axion. For example, the block `0x403048` is an immediate dominator of `0x404563` then their number of occurrences on the trace must be the same; indeed this number is `178217` for each, this corresponds also to the number of iterations of the outer-most loop. Or the blocks `0x402058` and `0x402096` have the unique post dominator `0x404563` then their sum of occurrences must equal to the number of occurrences of `0x404563`. -->
 
-  The program is "just" a loop, would life be easy from now, huh?. Not this time, unfortunately. Welcome to the world of bit-level and multi-process virtual machines.
+  The program is "just" a loop, would life be easy from now? Not this time, unfortunately :-). Welcome to the world of bit-level and multi-process virtual machines.
 
 ## Reversing the second virtual machine ##
 
@@ -71,7 +71,7 @@
     
   Examining on REVEN-Axion the [memory access](#memaccess403ca0) at `0x403ca7`, we observe that the `byte` value stored at this address is *periodically increased* from `0` to `6` (we call it opcode table `ID`):
   
-    0, 1, 2, 3, 4, 5, 6, 0, 1, 2, 3, 4,...
+    0, 1, 2, 3, 4, 5, 6, 0, 1, 2, 3,...
   
   <a name="memaccess403ca7">
   ![Memory access at `0x403ca7`](images/proc_time_slice_counter.png)
@@ -87,12 +87,16 @@
   
   each is the base address of an opcode table, so we get `7` different tables!!! Well, a virtual machine with multiple opcode tables, that's nice :-)
   
-  **Remark:**
-  The periodic increment from `0` to `6` of the opcode table index can be also *verified* by observing the following slice obtained by statically [slicing](https://en.wikipedia.org/wiki/Program_slicing) the [dispatcher](#dispatchercfg) with respect to the point of interest at `0x402096` and the value of `eax`.
+  The periodic increment from `0` to `6` of the opcode table index can be also *understood* by observing the following slice obtained by statically [slicing](https://en.wikipedia.org/wiki/Program_slicing) the [dispatcher](#dispatchercfg) with respect to the point of interest at `0x402096` and the value of `eax`.
   
   <a name="opcodetableslice">
   ![Slice of the dispatchercfg](images/f4b_opcode_table_slice.svg)
   </a>
+  
+  **Remark:**
+  *if we examine `dword` values at `0x40268b` along the execution of the binary, we will see that they are not constant :-), i.e. they are not always `0x403c32`, `0x40365b`, etc (remember that the binary is split into multiple gadges, they are repeatedly encrypted/decrypted, and there is only one in its clear form at a given time). But they keep always these values when they are read to get the opcode table.*
+  
+  ![Opcode tables in running time](images/opcode_tables_running.png)
   
 #### Instruction pointers ####
   
@@ -115,18 +119,32 @@
     0x402070  shl cl, 0x1
     0x402072  mov word ptr [ecx+0x403048], bx  ; update
   
-  So for each opcode table ID, we have a pair of `(opcode table, bit-level offset)`. Noticing that each offset can be interpreted as the "instruction pointer" of a virtual machine, that means there are indeed `7` **concurrent virtual machines** (corresponding with `ID`(s) from `0` to `6`), each has its own code and instruction pointer, and they share the same dispatcher and opcode handlers.
+  So for each `opcode table ID`, we have a corresponding pair of `(opcode table, bit-level offset)`. Noticing that each offset can be interpreted as the `instruction pointer` (abbr. `VmIP`) of a virtual machine, that means there are indeed `7` **concurrent virtual machines** corresponding with `ID`(s) from `0` to `6`, each has its own code and instruction pointer, and they share the same dispatcher and opcode handlers!!! We call the `opcode table ID` `VmID` from now on.
   
+#### Entry points ####
+
+ The instruction pointer of the virtual machine `VmID` is accessed/retrieved as `word ptr Ox403048[VmID]`. Except the virtual machine `0` where the `VmIP` is retrieved at the first time from `word ptr [0x403042]`, others has their `VmIP` are retrieved at the first time from `word ptr Ox403048[VmID]`. In both cases, the entry point of each virtual machine is always `0`:
+ 
 #### Multitasking ####
 
-  We notice that if the value of `al` at the instruction at `0x404568` is not `5` then the bit-level offset (i.e. the instruction pointer) is not extracted (resp. updated) from (resp. to) the instruction pointer table (i.e. `word` array at `0x403048`), it is simply increased when extracting data from the corresponding opcode table. Since `al` is assigned by the `byte` value at `0x403041`, slicing the dispatcher with respect to this `byte`, we have the following control flow graph:
+  We [observe](#dispatchercfg) that if the value of `al` at the instruction at `0x044568` is not `5` then the `VmID` (or `opcode table ID`, stored as `byte` value at `0x403ca7`) is kept, then so does the `opcode table` address; the  bit-level offset (i.e. the instruction pointer) is not extracted (resp. updated) from (resp. to) the instruction pointer table (i.e. `word` array at `0x403048`), it is simply increased when data is extracted from the corresponding opcode table. Otherwise, the `VmID` is periodically increased, and the corresponding `opcode table` as well as `instruction pointer` will be used.
   
+  Noticing that `al` is extracted as the `byte` value at `0x403041`, slicing the dispatcher with respect to this `byte`, we receive the [control flow graph](#timeslicingcfg) below. It shows that each virtual machine will *execute exactly `5` opcodes*, then switch to the periodically next virtual machine. This is is nothing but a **preemptive multitasking** execution model of `7` processes, each has a time-slice of `5` instructions.
+  
+  <a name="timeslicingcfg">
   ![VM's time slicing](images/f4b_vm_time_slice.svg)
+  </a>
   
-  We need understand how virtual machines switch execution. Considering first the instructions at `0x402048`, `0x40204d` and `0x40204d` in the [previous slice](#opcodetableslice), if the value of `al` at `0x404568` is not `5` then 
+  Until this point, we have received a very strange model of the dispatcher, in summary:
   
-  In summary, we have the following pseudo-code illustrating the semantics of the region:
+  * s
+  * c
   
-    let opcode_extract (time_slice: uint8 byref) (proc_id: uint8 byref) (proc_ip: uint16 byref) ()
+  
+  <!-- We need understand how virtual machines switch execution. Considering first the instructions at `0x402048`, `0x40204d` and `0x40204d` in the [previous slice](#opcodetableslice), if the value of `al` at `0x404568` is not `5` then  -->
+  
+  <!-- In summary, we have the following pseudo-code illustrating the semantics of the region: -->
+  
+<!-- let opcode_extract (time_slice: uint8 byref) (proc_id: uint8 byref) (proc_ip: uint16 byref) () -->
 
 
