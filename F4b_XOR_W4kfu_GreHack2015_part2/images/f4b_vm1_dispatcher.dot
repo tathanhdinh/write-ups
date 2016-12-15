@@ -1,60 +1,60 @@
 digraph G {
   0 [
      fontname="Source Code Pro",
-     fontsize=12, shape=box, style="rounded,filled", fillcolor=cornflowerblue,
+     fontsize=7, shape=box, style="rounded,filled", fillcolor=cornflowerblue,
      label="0x402048  mov al, byte ptr [0x403041]\l0x40204d  inc al\l"
   ];
 
   1 [
      fontname="Source Code Pro",
-     fontsize=12, shape=box, style=rounded,
+     fontsize=7, shape=box, style=rounded,
      label="0x404563  mov byte ptr [0x403041], al\l0x404568  cmp al, 0x5\l"
   ];
 
   2 [
      fontname="Source Code Pro",
-     fontsize=12, shape=box, style=rounded,
+     fontsize=7, shape=box, style=rounded,
      label="0x402058  xor eax, eax\l0x40205a  mov byte ptr [0x403041], al\l0x40205f  movzx eax, byte ptr [0x403ca7]\l0x402066  mov bx, word ptr [0x403042]\l0x40206d  movzx ecx, al\l0x402070  shl cl, 0x1\l0x402072  mov word ptr [ecx+0x403048], bx\l"
   ];
 
   3 [
      fontname="Source Code Pro",
-     fontsize=12, shape=box, style=rounded,
+     fontsize=7, shape=box, style=rounded,
      label="0x4046a8  inc al\l0x4046aa  cmp al, 0x7\l"
   ];
 
   4 [
      fontname="Source Code Pro",
-     fontsize=12, shape=box, style=rounded,
+     fontsize=7, shape=box, style=rounded,
      label="0x40207f  xor al, al\l"
   ];
 
   5 [
      fontname="Source Code Pro",
-     fontsize=12, shape=box, style=rounded,
+     fontsize=7, shape=box, style=rounded,
      label="0x402081  mov byte ptr [0x403ca7], al\l0x402086  shl eax, 0x1\l0x402088  mov bx, word ptr [eax+0x403048]\l0x40208f  mov word ptr [0x403042], bx\l"
   ];
 
   6 [
      fontname="Source Code Pro",
-     fontsize=12, shape=box, style="rounded,filled", fillcolor=gainsboro,
+     fontsize=7, shape=box, style="rounded,filled", fillcolor=gainsboro,
      label="0x402096  movzx eax, byte ptr [0x403ca7]\l0x40209d  shl eax, 0x2\l0x4020a0  mov ebx, dword ptr [eax+0x40268b]\l0x4020a6  mov ax, word ptr [0x403042]\l0x4020ac  xor edx, edx\l0x4020ae  mov ecx, 0x8\l0x4020b3  div ecx\l0x4020b5  add ebx, eax\l0x4020b7  mov ebx, dword ptr [ebx]\l0x4020b9  bswap ebx\l0x4020bb  mov cl, dl\l0x4020bd  shl ebx, cl\l0x4020bf  add word ptr [0x403042], 0x2\l"
   ];
 
   7 [
     fontname="Source Code Pro",
-    fontsize=12, shape=box, style="rounded,dotted",
+    fontsize=7, shape=box, style="rounded,dotted",
     label="0x4020c7  test ebx, 0xc0000000\l"
   ]
 
-  0 -> 1 [label="", style="solid"];
-  1 -> 2 [label="zf=1", style="dashed"];
-  1 -> 6 [label="zf=0", style="dashed"];
-  2 -> 3 [label="", style="solid"];
-  3 -> 4 [label="cf=0", style="dashed"];
-  3 -> 5 [label="cf=1", style="dashed"];
-  4 -> 5 [label="", style="solid"];
-  5 -> 6 [label="", style="solid"];
-  6 -> 7 [label="", style="dashed"];
-  7 -> 0 [label="", style="dotted"];
+  0 -> 1 [fontsize=7, label="", style="solid"];
+  1 -> 2 [fontsize=7, label="zf=1", style="dashed"];
+  1 -> 6 [fontsize=7, label="zf=0", style="dashed"];
+  2 -> 3 [fontsize=7, label="", style="solid"];
+  3 -> 4 [fontsize=7, label="cf=0", style="dashed"];
+  3 -> 5 [fontsize=7, label="cf=1", style="dashed"];
+  4 -> 5 [fontsize=7, label="", style="solid"];
+  5 -> 6 [fontsize=7, label="", style="solid"];
+  6 -> 7 [fontsize=7, label="", style="dashed"];
+  7 -> 0 [fontsize=7, label="", style="dotted"];
 }

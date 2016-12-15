@@ -1,31 +1,31 @@
 digraph G {
   0 [
     fontname="Source Code Pro",
-    fontsize=12, shape=box, style="rounded,filled", fillcolor=cornflowerblue,
+    fontsize=7, shape=box, style="rounded,filled", fillcolor=cornflowerblue,
     label="0x402048  mov al, byte ptr [0x403041]\l0x40204d  inc al\l"
   ];
 
   1 [
     fontname="Source Code Pro",
-    fontsize=12, shape=box, style=rounded,
+    fontsize=7, shape=box, style=rounded,
     label="0x404563  mov byte ptr [0x403041], al\l0x404568  cmp al, 0x5\l"
   ];
 
   2 [
     fontname="Source Code Pro",
-    fontsize=12, shape=box, style=rounded,
+    fontsize=7, shape=box, style=rounded,
     label="0x402058  xor eax, eax\l0x40205a  mov byte ptr [0x403041], al\l"
   ];
 
   3 [
     fontname="Source Code Pro",
-    fontsize=12, shape=box, style="rounded,filled", fillcolor=gainsboro,
+    fontsize=7, shape=box, style="rounded,filled", fillcolor=gainsboro,
     label="..."
   ];
 
-  0 -> 1 [label="", style="solid"];
-  1 -> 2 [label="zf=1", style="dashed"];
-  1 -> 3 [label="zf=0", style="dashed"];
-  2 -> 3 [label="", style="solid"];
-  3 -> 0 [label="", style="dotted"];
+  0 -> 1 [fontsize=7, label="", style="solid"];
+  1 -> 2 [fontsize=7, label="zf=1", style="dashed"];
+  1 -> 3 [fontsize=7, label="zf=0", style="dashed"];
+  2 -> 3 [fontsize=7, label="", style="solid"];
+  3 -> 0 [fontsize=7, label="", style="dotted"];
 }

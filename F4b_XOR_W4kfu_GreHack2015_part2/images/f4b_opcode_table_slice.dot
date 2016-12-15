@@ -1,53 +1,53 @@
 digraph G {
   0 [
     fontname="Source Code Pro",
-    fontsize=12, shape=box, style="rounded,filled", fillcolor=cornflowerblue,
+    fontsize=7, shape=box, style="rounded,filled", fillcolor=cornflowerblue,
     label="0x402048  mov al, byte ptr [0x403041]\l0x40204d  inc al\l"
   ];
 
   1 [
     fontname="Source Code Pro",
-    fontsize=12, shape=box, style=rounded,
-    label="...       ...\l0x404568  cmp al, 0x5\l"
+    fontsize=7, shape=box, style=rounded,
+    label="0x404568  cmp al, 0x5\l"
   ];
 
   2 [
     fontname="Source Code Pro",
-    fontsize=12, shape=box, style=rounded,
-    label="...       ...\l0x40205f  movzx eax, byte ptr [0x403ca7]\l...       ...\l"
+    fontsize=7, shape=box, style=rounded,
+    label="0x40205f  movzx eax, byte ptr [0x403ca7]\l"
   ];
 
   3 [
     fontname="Source Code Pro",
-    fontsize=12, shape=box, style=rounded,
+    fontsize=7, shape=box, style=rounded,
     label="0x4046a8  inc al\l0x4046aa  cmp al, 0x7\l"
   ];
 
   4 [
     fontname="Source Code Pro",
-    fontsize=12, shape=box, style=rounded,
+    fontsize=7, shape=box, style=rounded,
     label="0x40207f  xor al, al\l"
   ];
 
   5 [
     fontname="Source Code Pro",
-    fontsize=12, shape=box, style=rounded,
-    label="0x402081  mov byte ptr [0x403ca7], al\l...       ...\l"
+    fontsize=7, shape=box, style=rounded,
+    label="0x402081  mov byte ptr [0x403ca7], al\l"
   ]
 
   6 [
     fontname="Source Code Pro",
-    fontsize=12, shape=box, style="rounded,filled", fillcolor=gainsboro,
-    label="0x402096  movzx eax, byte ptr [0x403ca7]\l...       ...\l"
+    fontsize=7, shape=box, style="rounded,filled", fillcolor=gainsboro,
+    label="0x402096  movzx eax, byte ptr [0x403ca7]\l"
   ]
 
-  0 -> 1 [label="", style="solid"];
-  1 -> 2 [label="zf=1", style="dashed"];
-  1 -> 6 [label="zf=0", style="dashed"];
-  2 -> 3 [label="", style="solid"];
-  3 -> 4 [label="cf=0", style="dashed"];
-  3 -> 5 [label="cf=1", style="dashed"];
-  4 -> 5 [label="", style="solid"];
-  5 -> 6 [label="", style="solid"];
-  6 -> 0 [label="", style="dotted"];
+  0 -> 1 [fontsize=7, label="", style="solid"];
+  1 -> 2 [fontsize=7, label="zf=1", style="dashed"];
+  1 -> 6 [fontsize=7, label="zf=0", style="dashed"];
+  2 -> 3 [fontsize=7, label="", style="solid"];
+  3 -> 4 [fontsize=7, label="cf=0", style="dashed"];
+  3 -> 5 [fontsize=7, label="cf=1", style="dashed"];
+  4 -> 5 [fontsize=7, label="", style="solid"];
+  5 -> 6 [fontsize=7, label="", style="solid"];
+  6 -> 0 [fontsize=7, label="", style="dotted"];
 }
