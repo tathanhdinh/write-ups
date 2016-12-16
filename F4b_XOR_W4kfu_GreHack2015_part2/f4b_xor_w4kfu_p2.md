@@ -123,7 +123,7 @@
 
 #### Multitasking ####
 
-  These concurrent VM(s) can be interpreted as concurrent (virtual) processes, we will call the `opcode table ID` `VpID` from now on. [Observing](#dispatchercfg) that if the value of `al` in the instruction at `0x044568` is not `5` then the `VpID` is kept, and so does the `opcode table` address; the  bit-level offset (i.e. the instruction pointer) is not extracted (resp. updated) from (resp. to) the instruction pointer table (i.e. `word` array at `0x403048`), it is simply increased when data is extracted from the corresponding opcode table. Otherwise, the `VpID` is periodically increased, and the corresponding `opcode table` as well as `instruction pointer` will be used.
+  These concurrent VM(s) can be seen as concurrent (virtual) processes, we then call the `opcode table ID` `VpID` hereafter. [Observing](#dispatchercfg) that if the value of `al` in the instruction at `0x044568` is not `5` then the `VpID` is kept, and so does the opcode table address; the  bit-level offset (i.e. the instruction pointer) is not extracted (resp. updated) from (resp. to) the instruction pointer table (i.e. `word` array at `0x403048`), it is simply increased when data is extracted from the corresponding opcode table. Otherwise, the `VpID` is periodically increased, and the corresponding opcode table as well as `instruction pointer` will be used. In other words, if `al` is not `5` then the same 
 
   We notice that the value above of `al` is extracted as the `byte` value at `0x403041`, slicing the dispatcher with respect to this `byte`, we receive the [control flow graph](#timeslicingcfg) below. It shows that each virtual machine will *execute exactly `5` opcodes*, then switch to the periodically next virtual machine. This is nothing but a **preemptive multitasking** execution model of `7` processes, each has a time-slice of `5` instructions.
 
@@ -153,19 +153,35 @@
 
 ### Instruction set ###
 
-  We have discovered the instruction (i.e. opcode) tables of all processes. Since our purpose is to *decompile* them, the natural next step is to reverse the instruction set of the virtual machine.
+  We have reversed the instruction (i.e. opcode) tables of all processes. Our purpose is to completely *decompile* them, then the natural next step is to reverse the instruction set of the virtual machine.
 
-  As previously noticed, the instruction handlers are located at "bottom" basic blocks. We observe also that the "bit extraction" [pattern](#bitlevelaccess) appears all over these blocks. Indeed the VM uses the pattern to extract instructions (in the instruction tables), each consists in several consecutive bits. It is a repetitive task in presenting step-by-step how instructions are extracted, moreover some of them have similar semantics; so we will present below how they are classified into several class and the format of each.
+  As previously noticed, the instruction handlers are located at "bottom" basic blocks. We observe also that the "bit extraction" [pattern](#bitlevelaccess) appears all over these blocks, this is no surprise: the VM uses the pattern to extract instructions (in the instruction tables), each consists in several consecutive bits. 
+  <!--It is a repetitive task in presenting step-by-step how instructions are extracted, moreover some of them have similar semantics; so we will present below how they are classified into several class and the format of each.-->
 
 #### Instruction classes ####
 
-  The instructions set can be divided into `4` classes, we illustrate each class by a color in the following [control flow graph](#controlflowgraph): the basic blocks handling the instructions of the same class get the same color.
+  Following the *instruction format*, the instruction set can be divided into `4` classes; we illustrate each class by a color in the following [control flow graph](#controlflowgraph): the basic blocks handling the instructions of the same class have assigned the same color.
 
   <a  id="controlflowgraph">
   ![Control flow graph](images/f4b_vm1_cfg.svg)
   </a>
 
-  
+  Below, let `vI` denote a value `v` of `I` bit, each instruction is denoted by it syntax  (e.g. `00|v16|v3` consists of instructions having first `2` bits `0`, then some value encoded in `16` bits, and some value encoded in `3` bits), and let `pID` denotes the `byte` value stored in `[0x403ca7]`. The semantics of instructions in each class is revealed in the following pseudo code C:
+
+  * `00|v16|v3`:
+   + `00|a16|000`: `if (byte ptr 0x403654[pID] == 0x1) then goto a16`,
+   + `00|a16|001`: `if (byte ptr 0x403654[pID] != 0x1) then goto a16`,
+   + `00|a16|010`: `goto a16`,
+   + `00|o16|011`: `if (byte ptr 0x403732[o16] != 0xff) then goto +0 else byte ptr 0x403732[o16] = pID`,
+   + `00|o16|100`: `if (byte ptr 0x403732[o16] != pID) then goto +0 else byte ptr 0x403732[o16] = 0xff`,
+   + `00|v16|(101,110,111)` : `check_password()`
+  * `01|a3|b3|v2`:
+   + `01|a3|b3|00`: `dword ptr 0x403ca8[pID][a3] = dword ptr 0x403ca8[pID][b3]`,
+   + `01|a3|b3|01`: `dword ptr 0x403ca8[pID][a3] = v32` (`v32` is calculated as `x16|y16`, where the `x16` and `y16` are extracted consecutively as `16` bit values, next to the current instruction),
+   + `01|a3|b3|10`: `if (byte ptr 0x403732[v16] == pID) then dword ptr password[v16] = 0x403ca8[pID][b3] else goto +0` (where `v16` is extracted as `16` bit value, next to the current instruction),
+
+
+  Well, no comment..., we have not any single idea about ideas of the authors when design this osbscure instruction set, ay be just for fun!?
 
   <!-- We need understand how virtual machines switch execution. Considering first the instructions at `0x402048`, `0x40204d` and `0x40204d` in the [previous slice](#opcodetableslice), if the value of `al` at `0x404568` is not `5` then  -->
 
