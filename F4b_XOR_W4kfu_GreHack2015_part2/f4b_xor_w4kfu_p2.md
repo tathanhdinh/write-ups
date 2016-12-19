@@ -69,7 +69,7 @@
     0x402096  movzx eax, byte ptr [0x403ca7]
     0x40209d  shl eax, 0x2
 
-  Examining on REVEN-Axion the [memory access](#memaccess403ca0) at `0x403ca7`, we observe that the `byte` value stored at this address is *periodically increased* from `0` to `6` (we call it `opcode table ID`):
+  Examining on REVEN-Axion the [memory access](#memaccess403ca7) at `0x403ca7`, we observe that the `byte` value stored at this address is *periodically increased* from `0` to `6` (we call it `opcode table ID`):
 
     0, 1, 2, 3, 4, 5, 6, 0, 1, 2, 3,...
 
@@ -90,7 +90,7 @@
   The periodic increment from `0` to `6` of the opcode table index can be also *understood* by observing the following slice obtained by statically [slicing](https://en.wikipedia.org/wiki/Program_slicing) the [dispatcher](#dispatchercfg) with respect to the point of interest at `0x402096` and the value of `eax`.
 
   <a name="opcodetableslice">
-  ![Slice of the dispatchercfg](images/f4b_opcode_table_slice.svg)
+  ![Slice of the dispatcher](images/f4b_opcode_table_slice.svg)
   </a>
 
   **Remark:**
@@ -166,22 +166,35 @@
   ![Control flow graph](images/f4b_vm1_cfg.svg)
   </a>
 
-  Below, let `vI` denote a value `v` of `I` bit, each instruction is denoted by it syntax  (e.g. `00|v16|v3` consists of instructions having first `2` bits `0`, then some value encoded in `16` bits, and some value encoded in `3` bits), and let `pID` denotes the `byte` value stored in `[0x403ca7]`. The semantics of instructions in each class is revealed in the following pseudo code C:
+  Below, let `vI` denote a value `v` of `I` bit, each instruction is denoted by it syntax  (e.g. `00|v16|v3` consists of instructions having first `2` bits `0`, then some value encoded in `16` bits, and some value encoded in `3` bits), and let `pID` denotes the `byte` value stored in `[0x403ca7]`. The semantics of instructions in each class is revealed in the following pseudo code C.
 
   * `00|v16|v3`:
-   + `00|a16|000`: `if (byte ptr 0x403654[pID] == 0x1) then goto a16`,
-   + `00|a16|001`: `if (byte ptr 0x403654[pID] != 0x1) then goto a16`,
-   + `00|a16|010`: `goto a16`,
-   + `00|o16|011`: `if (byte ptr 0x403732[o16] != 0xff) then goto +0 else byte ptr 0x403732[o16] = pID`,
-   + `00|o16|100`: `if (byte ptr 0x403732[o16] != pID) then goto +0 else byte ptr 0x403732[o16] = 0xff`,
+   + `00|a16|000`: `if (0x403654[pID] == 0x1) then goto a16`
+   + `00|a16|001`: `if (0x403654[pID] != 0x1) then goto a16`
+   + `00|a16|010`: `goto a16`
+   + `00|o16|011`: `if (0x403732[o16] != 0xff) then goto +0 else 0x403732[o16] = pID`
+   + `00|o16|100`: `if (0x403732[o16] != pID) then goto +0 else 0x403732[o16] = 0xff`
    + `00|v16|(101,110,111)` : `check_password()`
   * `01|a3|b3|v2`:
-   + `01|a3|b3|00`: `dword ptr 0x403ca8[pID][a3] = dword ptr 0x403ca8[pID][b3]`,
-   + `01|a3|b3|01`: `dword ptr 0x403ca8[pID][a3] = v32` (`v32` is calculated as `x16|y16`, where the `x16` and `y16` are extracted consecutively as `16` bit values, next to the current instruction),
-   + `01|a3|b3|10`: `if (byte ptr 0x403732[v16] == pID) then dword ptr password[v16] = 0x403ca8[pID][b3] else goto +0` (where `v16` is extracted as `16` bit value, next to the current instruction),
+   + `01|a3|b3|00`: `dw 0x403ca8[pID][a3] = dw 0x403ca8[pID][b3]`,
+   + `01|a3|b3|01`: `dw 0x403ca8[pID][a3] = v32` (`v32` is calculated as `x16|y16`, where the `x16` and `y16` are extracted consecutively as `16` bit values, next to the current instruction)
+   + `01|a3|b3|10`: `if (0x403732[v16] == pID) then dw password[v16] = 0x403ca8[pID][b3] else goto +0` (where `v16` is extracted as `16` bit value, next to the current instruction)
+   + `01|a3|b3|11`: `if (0x403732[o16] == pID) then dw 0x403ca8[pID][a3] = dw password[v16] else goto +0` (the value`v16` is extracted similarly as above)
+  + `10|v3|v1`:
+   + `10|v3|0`: `dw 0x403ca8[pID][v3] = reverse32(dw 0x403ca8[pID][v3])`
+   + `10|v3|1`: `tmp_ecx = ++0x403832[pID][0]; 0x403832[pID][tmp_ecx] = 0x403ca8[pID][v3]`
+  + `11|a3|b3|v3`:
+   + `11|a3|b3|000`: `dw 0x403ca8[pID][a3] += 0x403ca8[pID][b3]`
+   + `11|a3|b3|001`: `dw 0x403ca8[pID][a3] -= 0x403ca8[pID][b3]`
+   + `11|a3|b3|010`: `dw 0x403ca8[pID][a3] = rol(0x403ca8[pID][a3], 0x403ca8[pID][b3])`
+   + `11|a3|b3|011`: `dw 0x403ca8[pID][a3] = ror(0x403ca8[pID][a3], 0x403ca8[pID][b3])`
+   + `11|a3|b3|100`: `dw 0x403ca8[pID][a3] = dw 0x403ca8[pID][b3] ^ dw 0x403ca8[pID][a3]`
+   + `11|a3|b3|101`: ``
 
+  **Remark:**
+  Without an explicit type annotation (e.g. `w` for `word`, `dw` for double `word`, etc.), array access operator `[]` is typed to return `byte`, also types are omitted where they are clear from the context (i.e. can be referenced).
 
-  Well, no comment..., we have not any single idea about ideas of the authors when design this osbscure instruction set, ay be just for fun!?
+  <!--Well, no comment..., we have not any single idea about the underlying motivationideas of the authors when design this obscure instruction set :-)-->
 
   <!-- We need understand how virtual machines switch execution. Considering first the instructions at `0x402048`, `0x40204d` and `0x40204d` in the [previous slice](#opcodetableslice), if the value of `al` at `0x404568` is not `5` then  -->
 
