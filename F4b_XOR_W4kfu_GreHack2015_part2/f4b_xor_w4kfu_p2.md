@@ -28,7 +28,7 @@
 
   Let's consider the higher basic blocks and their control flow, consisting of in the following control flow graph. They form a [region](http://digital.cs.usu.edu/~allan/AdvComp/Notes/controld/controld.html) whose the header is the block at `0x402048`, there is even a unique exit block at `0x402096`. This is an useful property since we can safely isolate the [data-flow analysis](https://en.wikipedia.org/wiki/Data-flow_analysis) on these blocks from other parts of the program.
 
-  <a name="dispatchercfg">
+  <a id="dispatchercfg">
   ![Dispatcher](images/f4b_vm1_dispatcher.svg)
   </a>
 
@@ -40,6 +40,12 @@
 #### <a id="bitlevelaccess">Bit-level access</a> ####
 
   To recover the semantics of the region, we notice an interesting pattern in the exit block (which occurs also at lower basic blocks, e.g. at `0x4023de`, `0x4022f8`, etc). That is the following sequence of instruction:
+
+  <a id="bitextraction">
+  ![Bit extraction sequence](images/bit_extraction.png)
+  </a>
+
+  which can be interpreted as:
 
     mov ebx, dword ptr [eax+0x40268b]  ; ebx = address of a byte array
     mov ax, word ptr [0x403042]        ; eax = a bit-level offset
@@ -87,7 +93,7 @@
 
   each is the base address of an opcode table, so we get `7` different tables!!! Ok, a virtual machine with multiple opcode tables, that's nice :-)
 
-  The periodic increment from `0` to `6` of the opcode table index can be also *understood* by observing the following slice obtained by statically [slicing](https://en.wikipedia.org/wiki/Program_slicing) the [dispatcher](#dispatchercfg) with respect to the point of interest at `0x402096` and the value of `eax`.
+  The periodic increment from `0` to `6` of `opcode table id` is revealed also in the following static [slice](https://en.wikipedia.org/wiki/Program_slicing) of the [dispatcher](#dispatchercfg) with respect to the point of interest at `0x402096` and the value of `eax`.
 
   <a name="opcodetableslice">
   ![Slice of the dispatcher](images/f4b_opcode_table_slice.svg)
@@ -111,7 +117,7 @@
     0x402088  mov bx, word ptr [eax+0x403048]  ; bit-level offset
     0x40208f  mov word ptr [0x403042], bx
 
-  Also, this is nothing surprising (the dispatcher is not obfuscated, fortunately :-)) that this offset is updated back to the array by:
+  Also, this is nothing surprising (the dispatcher is not obfuscated :-)) that this offset is updated back to the array by:
 
     0x40205f  movzx eax, byte ptr [0x403ca7]   ; table ID
     0x402066  mov bx, word ptr [0x403042]      ; bit-level offset
@@ -123,7 +129,7 @@
 
 #### Multitasking ####
 
-  These concurrent VM(s) can be seen as concurrent (virtual) processes, we then call the `opcode table ID` `VpID` hereafter. [Observing](#dispatchercfg) that if the value of `al` in the instruction at `0x044568` is not `5` then the `VpID` is kept, and so does the opcode table address; the  bit-level offset (i.e. the instruction pointer) is not extracted (resp. updated) from (resp. to) the instruction pointer table (i.e. `word` array at `0x403048`), it is simply increased when data is extracted from the corresponding opcode table. Otherwise, the `VpID` is periodically increased, and the corresponding opcode table as well as `instruction pointer` will be used. In other words, if `al` is not `5` then the same 
+  These concurrent VM(s) can be seen as concurrent (virtual) processes, we then call the `opcode table ID` `VpID` hereafter. [Observing](#dispatchercfg) that if the value of `al` in the instruction at `0x044568` is not `5` then `VpID` is kept, and so does the opcode table address; the  bit-level offset (i.e. the instruction pointer) is not extracted (resp. updated) from (resp. to) the instruction pointer table (i.e. `word` array at `0x403048`), it is simply increased when data is extracted from the corresponding opcode table. Otherwise, the `VpID` is periodically increased, and the corresponding opcode table as well as `instruction pointer` will be used. In other words, if `al` is not `5` then the same 
 
   We notice that the value above of `al` is extracted as the `byte` value at `0x403041`, slicing the dispatcher with respect to this `byte`, we receive the [control flow graph](#timeslicingcfg) below. It shows that each virtual machine will *execute exactly `5` opcodes*, then switch to the periodically next virtual machine. This is nothing but a **preemptive multitasking** execution model of `7` processes, each has a time-slice of `5` instructions.
 
@@ -143,7 +149,7 @@
  ![Entry points](images/entry_points.png)
  </a>
 
-#### Summary ####
+#### <a id="virtualprocesssummary">Summary</a> ####
 
   We have reversed completely the dispatcher of the second virtual machine. This "non-obfuscated" devil consists of `7` "virtual" processes, identified by a `VpID` ranged in `[0, 6]`, each
 
@@ -177,22 +183,476 @@
    + `00|v16|(101,110,111)` : `check_password()`
   * `01|a3|b3|v2`:
    + `01|a3|b3|00`: `dw 0x403ca8[pID][a3] = dw 0x403ca8[pID][b3]`,
-   + `01|a3|b3|01`: `dw 0x403ca8[pID][a3] = v32` (`v32` is calculated as `x16|y16`, where the `x16` and `y16` are extracted consecutively as `16` bit values, next to the current instruction)
-   + `01|a3|b3|10`: `if (0x403732[v16] == pID) then dw password[v16] = 0x403ca8[pID][b3] else goto +0` (where `v16` is extracted as `16` bit value, next to the current instruction)
-   + `01|a3|b3|11`: `if (0x403732[o16] == pID) then dw 0x403ca8[pID][a3] = dw password[v16] else goto +0` (the value`v16` is extracted similarly as above)
+   + `01|a3|b3|01`: `0x403ca8[pID][a3] = v32` (`v32` is calculated as `x16|y16`, where the `x16` and `y16` are extracted consecutively as `16` bit values, next to the current instruction)
+   + `01|a3|b3|10`: `if (0x403732[v16] == pID) then password[v16] = 0x403ca8[pID][b3] else goto +0` (where `v16` is extracted as `16` bit value, next to the current instruction)
+   + `01|a3|b3|11`: `if (0x403732[o16] == pID) then 0x403ca8[pID][a3] = password[v16] else goto +0` (the value`v16` is extracted similarly as above)
   + `10|v3|v1`:
-   + `10|v3|0`: `dw 0x403ca8[pID][v3] = reverse32(dw 0x403ca8[pID][v3])`
+   + `10|v3|0`: `0x403ca8[pID][v3] = bit_reverse(0x403ca8[pID][v3])` (the function `bit_reverse` reverses bits of a `32` bit value, i.e. bit `0` becomes `31`, bit `1` become `30`, etc)
    + `10|v3|1`: `tmp_ecx = ++0x403832[pID][0]; 0x403832[pID][tmp_ecx] = 0x403ca8[pID][v3]`
   + `11|a3|b3|v3`:
-   + `11|a3|b3|000`: `dw 0x403ca8[pID][a3] += 0x403ca8[pID][b3]`
-   + `11|a3|b3|001`: `dw 0x403ca8[pID][a3] -= 0x403ca8[pID][b3]`
-   + `11|a3|b3|010`: `dw 0x403ca8[pID][a3] = rol(0x403ca8[pID][a3], 0x403ca8[pID][b3])`
-   + `11|a3|b3|011`: `dw 0x403ca8[pID][a3] = ror(0x403ca8[pID][a3], 0x403ca8[pID][b3])`
-   + `11|a3|b3|100`: `dw 0x403ca8[pID][a3] = dw 0x403ca8[pID][b3] ^ dw 0x403ca8[pID][a3]`
-   + `11|a3|b3|101`: ``
+   + `11|a3|b3|000`: `0x403ca8[pID][a3] += 0x403ca8[pID][b3]`
+   + `11|a3|b3|001`: `0x403ca8[pID][a3] -= 0x403ca8[pID][b3]`
+   + `11|a3|b3|010`: `0x403ca8[pID][a3] = rol(0x403ca8[pID][a3], 0x403ca8[pID][b3])`
+   + `11|a3|b3|011`: `0x403ca8[pID][a3] = ror(0x403ca8[pID][a3], 0x403ca8[pID][b3])`
+   + `11|a3|b3|100`: `0x403ca8[pID][a3] = 0x403ca8[pID][b3] ^ 0x403ca8[pID][a3]`
+   + `11|a3|b3|101`: `0x403654[pID] = (0x403ca8[pID][a3] == 0x403ca8[pID][b3])`
+   + `11|a3|b3|(110,111)`: `if (b3 < 0x403832[a3][0]) then 0x403ca8[pID][a3][b3 + 1] else goto +0`
+
+where `password` is nothing but the buffer at `0x403198` containing the input password.
 
   **Remark:**
-  Without an explicit type annotation (e.g. `w` for `word`, `dw` for double `word`, etc.), array access operator `[]` is typed to return `byte`, also types are omitted where they are clear from the context (i.e. can be referenced).
+  Without an explicit type annotation (e.g. `w` for `word`, `dw` for double `word`, etc.), array access operator `[]` is typed to return `byte`, also types are omitted when they are clear from the context (i.e. can be referenced).
+
+### Disasembling and decompiling ###
+
+  We know both *syntax and semantics* of the instruction set. Moreover, the opcode table and entry point of each virtual process have been [reversed](#virtualprocesssummary); a simple *recursive traversal* disassembler give us the following result:
+
+  Process `0`:
+
+    pID = 0;
+    0x000: 0x403ca8[pID][2] = 0x550342b8;
+    0x02a: if (0x403732[0] != 0xff) then goto 0x02a else 0x403732[0] = pID;
+    0x03f: if (0x403732[0] == pID) then 0x403ca7[pID][1] = password[0] else goto 0x03f;
+    0x059: 0x403ca8[pID][1] += 0x403ca8[pID][2];
+    0x064: if (0x403732[0] == pID) then password[0] = 0x403ca7[pID][1] else goto 0x064;
+    0x07e: if (0x403732[0] != pID) then goto 0x07e else 0x403732[0] = 0xff;
+    0x093: 0x403ca8[pID][2] = 0xe3348f8b;
+    0x0bd: if (0x403732[1] != 0xff) then goto 0x0bd else 0x403732[1] = pID;
+    0x0d2: if (0x403732[1] == pID) then 0x403ca7[pID][1] = password[1] else goto 0x0d2;
+    0x0ec: 0x403ca8[pID][1] += 0x403ca8[pID][2];
+    0x0f7: if (0x403732[1] == pID) then password[1] = 0x403ca7[pID][1] else goto 0x0f7;
+    0x111: if (0x403732[1] != pID) then goto 0x111 else 0x403732[1] = 0xff;
+    0x126: 0x403ca8[pID][2] = 0x58c85bdd;
+    0x150: if (0x403732[2] != 0xff) then goto 0x150 else 0x403732[2] = pID;
+    0x165: if (0x403732[2] == pID) then 0x403ca7[pID][1] = password[2] else goto 0x165;
+    0x17f: 0x403ca8[pID][1] += 0x403ca8[pID][2];
+    0x18a: if (0x403732[2] == pID) then password[2] = 0x403ca7[pID][1] else goto 0x18a;
+    0x1a4: if (0x403732[2] != pID) then goto 0x1a4 else 0x403732[2] = 0xff;
+    0x1b9: 0x403ca8[pID][2] = 0x7406e41c;
+    0x1e3: if (0x403732[3] != 0xff) then goto 0x1e3 else 0x403732[3] = pID;
+    0x1f8: if (0x403732[3] == pID) then 0x403ca7[pID][1] = password[3] else goto 0x1f8;
+    0x212: 0x403ca8[pID][1] += 0x403ca8[pID][2];
+    0x21d: if (0x403732[3] == pID) then password[3] = 0x403ca7[pID][1] else goto 0x21d;
+    0x237: if (0x403732[3] != pID) then goto 0x237 else 0x403732[3] = 0xff;
+    0x24c: 0x403ca8[pID][2] = 0x72ece789;
+    0x276: if (0x403732[4] != 0xff) then goto 0x276 else 0x403732[4] = pID;
+    0x28b: if (0x403732[4] == pID) then 0x403ca7[pID][1] = password[4] else goto 0x28b;
+    0x2a5: 0x403ca8[pID][1] += 0x403ca8[pID][2];
+    0x2b0: if (0x403732[4] == pID) then password[4] = 0x403ca7[pID][1] else goto 0x2b0;
+    0x2ca: if (0x403732[4] != pID) then goto 0x2ca else 0x403732[4] = 0xff;
+    0x2df: 0x403ca8[pID][2] = 0xefa2f7ec;
+    0x309: if (0x403732[5] != 0xff) then goto 0x309 else 0x403732[5] = pID;
+    0x31e: if (0x403732[5] == pID) then 0x403ca7[pID][1] = password[5] else goto 0x31e;
+    0x338: 0x403ca8[pID][1] += 0x403ca8[pID][2];
+    0x343: if (0x403732[5] == pID) then password[5] = 0x403ca7[pID][1] else goto 0x343;
+    0x35d: if (0x403732[5] != pID) then goto 0x35d else 0x403732[5] = 0xff;
+    0x372: goto 0x000;
+
+  Process `1`:
+
+    pID = 1;
+    0x000: 0x403ca8[pID][5] = 0x00000001;
+    0x02a: 0x403ca8[pID][2] = 0x6dc555e2;
+    0x054: 0x403ca8[pID][3] = 0x0000001f;
+    0x07e: 0x403ca8[pID][4] = 0x0000036d;
+    0x0a8: if (0x403732[0] != 0xff) then goto 0x0a8 else 0x403732[0] = pID;
+    0x0bd: if (0x403732[0] == pID) then 0x403ca7[pID][1] = password[0] else goto 0x0bd;
+    0x0d7: 0x403ca8[pID][6] = 0x403ca8[pID][6] ^ 0x403ca8[pID][6];
+    0x0e2: 0x403ca8[pID][1] = 0x403ca8[pID][2] ^ 0x403ca8[pID][1];
+    0x0ed: 0x403ca8[pID][1] = rol(0x403ca8[pID][1], 0x403ca8[pID][3]);
+    0x0f8: 0x403ca8[pID][6] += 0x403ca8[pID][5];
+    0x103: 0x403654[pID] = (0x403ca8[pID][6] == 0x403ca8[pID][4]);
+    0x10e: if (0x403654[pID] != 0x1) then goto 0x0e2;
+    0x123: if (0x403732[0] != pID) then goto 0x123 else 0x403732[0] = 0xff;
+    0x138: tmp_ecx = ++0x403832[pID][0]; 0x403832[pID][tmp_ecx] = 0x403ca8[pID][1];
+    0x13e: 0x403ca8[pID][2] = 0x668471f5;
+    0x168: 0x403ca8[pID][3] = 0x00000013;
+    0x192: 0x403ca8[pID][4] = 0x00000305;
+    0x1bc: if (0x403732[1] != 0xff) then goto 0x1bc else 0x403732[1] = pID;
+    0x1d1: if (0x403732[1] == pID) then 0x403ca7[pID][1] = password[1] else goto 0x1d1;
+    0x1eb: 0x403ca8[pID][6] = 0x403ca8[pID][6] ^ 0x403ca8[pID][6];
+    0x1f6: 0x403ca8[pID][1] = 0x403ca8[pID][2] ^ 0x403ca8[pID][1];
+    0x201: 0x403ca8[pID][1] = rol(0x403ca8[pID][1], 0x403ca8[pID][3]);
+    0x20c: 0x403ca8[pID][6] += 0x403ca8[pID][5];
+    0x217: 0x403654[pID] = (0x403ca8[pID][6] == 0x403ca8[pID][4]);
+    0x222: if (0x403654[pID] != 0x1) then goto 0x1f6;
+    0x237: if (0x403732[1] != pID) then goto 0x237 else 0x403732[1] = 0xff;
+    0x24c: tmp_ecx = ++0x403832[pID][0]; 0x403832[pID][tmp_ecx] = 0x403ca8[pID][1];
+    0x252: 0x403ca8[pID][2] = 0x21f8a104;
+    0x27c: 0x403ca8[pID][3] = 0x00000010;
+    0x2a6: 0x403ca8[pID][4] = 0x000001e6;
+    0x2d0: if (0x403732[2] != 0xff) then goto 0x2d0 else 0x403732[2] = pID;
+    0x2e5: if (0x403732[2] == pID) then 0x403ca7[pID][1] = password[2] else goto 0x2e5;
+    0x2ff: 0x403ca8[pID][6] = 0x403ca8[pID][6] ^ 0x403ca8[pID][6];
+    0x30a: 0x403ca8[pID][1] = 0x403ca8[pID][2] ^ 0x403ca8[pID][1];
+    0x315: 0x403ca8[pID][1] = rol(0x403ca8[pID][1], 0x403ca8[pID][3]);
+    0x320: 0x403ca8[pID][6] += 0x403ca8[pID][5];
+    0x32b: 0x403654[pID] = (0x403ca8[pID][6] == 0x403ca8[pID][4]);
+    0x336: if (0x403654[pID] != 0x1) then goto 0x30a;
+    0x34b: if (0x403732[2] != pID) then goto 0x34b else 0x403732[2] = 0xff;
+    0x360: tmp_ecx = ++0x403832[pID][0]; 0x403832[pID][tmp_ecx] = 0x403ca8[pID][1];
+    0x366: 0x403ca8[pID][2] = 0x0d665e60;
+    0x390: 0x403ca8[pID][3] = 0x0000001a;
+    0x3ba: 0x403ca8[pID][4] = 0x000001d5;
+    0x3e4: if (0x403732[3] != 0xff) then goto 0x3e4 else 0x403732[3] = pID;
+    0x3f9: if (0x403732[3] == pID) then 0x403ca7[pID][1] = password[3] else goto 0x3f9;
+    0x413: 0x403ca8[pID][6] = 0x403ca8[pID][6] ^ 0x403ca8[pID][6];
+    0x41e: 0x403ca8[pID][1] = 0x403ca8[pID][2] ^ 0x403ca8[pID][1];
+    0x429: 0x403ca8[pID][1] = rol(0x403ca8[pID][1], 0x403ca8[pID][3]);
+    0x434: 0x403ca8[pID][6] += 0x403ca8[pID][5];
+    0x43f: 0x403654[pID] = (0x403ca8[pID][6] == 0x403ca8[pID][4]);
+    0x44a: if (0x403654[pID] != 0x1) then goto 0x41e;
+    0x45f: if (0x403732[3] != pID) then goto 0x45f else 0x403732[3] = 0xff;
+    0x474: tmp_ecx = ++0x403832[pID][0]; 0x403832[pID][tmp_ecx] = 0x403ca8[pID][1];
+    0x47a: 0x403ca8[pID][2] = 0x69fd3480;
+    0x4a4: 0x403ca8[pID][3] = 0x00000007;
+    0x4ce: 0x403ca8[pID][4] = 0x000000cc;
+    0x4f8: if (0x403732[4] != 0xff) then goto 0x4f8 else 0x403732[4] = pID;
+    0x50d: if (0x403732[4] == pID) then 0x403ca7[pID][1] = password[4] else goto 0x50d;
+    0x527: 0x403ca8[pID][6] = 0x403ca8[pID][6] ^ 0x403ca8[pID][6];
+    0x532: 0x403ca8[pID][1] = 0x403ca8[pID][2] ^ 0x403ca8[pID][1];
+    0x53d: 0x403ca8[pID][1] = rol(0x403ca8[pID][1], 0x403ca8[pID][3]);
+    0x548: 0x403ca8[pID][6] += 0x403ca8[pID][5];
+    0x553: 0x403654[pID] = (0x403ca8[pID][6] == 0x403ca8[pID][4]);
+    0x55e: if (0x403654[pID] != 0x1) then goto 0x532;
+    0x573: if (0x403732[4] != pID) then goto 0x573 else 0x403732[4] = 0xff;
+    0x588: tmp_ecx = ++0x403832[pID][0]; 0x403832[pID][tmp_ecx] = 0x403ca8[pID][1];
+    0x58e: 0x403ca8[pID][2] = 0xe4b8c392;
+    0x5b8: 0x403ca8[pID][3] = 0x00000012;
+    0x5e2: 0x403ca8[pID][4] = 0x0000025d;
+    0x60c: if (0x403732[5] != 0xff) then goto 0x60c else 0x403732[5] = pID;
+    0x621: if (0x403732[5] == pID) then 0x403ca7[pID][1] = password[5] else goto 0x621;
+    0x63b: 0x403ca8[pID][6] = 0x403ca8[pID][6] ^ 0x403ca8[pID][6];
+    0x646: 0x403ca8[pID][1] = 0x403ca8[pID][2] ^ 0x403ca8[pID][1];
+    0x651: 0x403ca8[pID][1] = rol(0x403ca8[pID][1], 0x403ca8[pID][3]);
+    0x65c: 0x403ca8[pID][6] += 0x403ca8[pID][5];
+    0x667: 0x403654[pID] = (0x403ca8[pID][6] == 0x403ca8[pID][4]);
+    0x672: if (0x403654[pID] != 0x1) then goto 0x646;
+    0x687: if (0x403732[5] != pID) then goto 0x687 else 0x403732[5] = 0xff;
+    0x69c: tmp_ecx = ++0x403832[pID][0]; 0x403832[pID][tmp_ecx] = 0x403ca8[pID][1];
+    0x6a2: goto 0x6a2;
+
+  Process `2`:
+
+    pID = 2;
+    0x000: 0x403ca8[pID][5] = 0x00000001;
+    0x02a: 0x403ca8[pID][2] = 0xecf6d571;
+    0x054: 0x403ca8[pID][3] = 0x0000000e;
+    0x07e: 0x403ca8[pID][4] = 0x0000006e;
+    0x0a8: if (0x403732[0] != 0xff) then goto 0x0a8 else 0x403732[0] = pID;
+    0x0bd: if (0x403732[0] == ctrn_idx) then 0x403ca7[ctrn_idx][1] = password[0] else goto 0x0bd;
+    0x0d7: 0x403ca8[pID][6] = 0x403ca8[pID][6] ^ 0x403ca8[pID][6];
+    0x0e2: 0x403ca8[pID][1] -= 0x403ca8[pID][2];
+    0x0ed: 0x403ca8[pID][1] = ror(0x403ca8[pID][1], 0x403ca8[pID][3]);
+    0x0f8: 0x403ca8[pID][6] += 0x403ca8[pID][5];
+    0x103: 0x403654[pID] = (0x403ca8[pID][6] == 0x403ca8[pID][4]);
+    0x10e: if (0x403654[pID] != 0x1) then goto 0x0e2;
+    0x123: if (0x403732[0] != pID) then goto 0x123 else 0x403732[0] = 0xff;
+    0x138: tmp_ecx = ++0x403832[pID][0]; 0x403832[pID][tmp_ecx] = 0x403ca8[pID][1];
+    0x13e: 0x403ca8[pID][2] = 0xec829194;
+    0x168: 0x403ca8[pID][3] = 0x00000010;
+    0x192: 0x403ca8[pID][4] = 0x0000020d;
+    0x1bc: if (0x403732[1] != 0xff) then goto 0x1bc else 0x403732[1] = pID;
+    0x1d1: if (0x403732[1] == ctrn_idx) then 0x403ca7[ctrn_idx][1] = password[1] else goto 0x1d1;
+    0x1eb: 0x403ca8[pID][6] = 0x403ca8[pID][6] ^ 0x403ca8[pID][6];
+    0x1f6: 0x403ca8[pID][1] -= 0x403ca8[pID][2];
+    0x201: 0x403ca8[pID][1] = ror(0x403ca8[pID][1], 0x403ca8[pID][3]);
+    0x20c: 0x403ca8[pID][6] += 0x403ca8[pID][5];
+    0x217: 0x403654[pID] = (0x403ca8[pID][6] == 0x403ca8[pID][4]);
+    0x222: if (0x403654[pID] != 0x1) then goto 0x1f6;
+    0x237: if (0x403732[1] != pID) then goto 0x237 else 0x403732[1] = 0xff;
+    0x24c: tmp_ecx = ++0x403832[pID][0]; 0x403832[pID][tmp_ecx] = 0x403ca8[pID][1];
+    0x252: 0x403ca8[pID][2] = 0x5c167e65;
+    0x27c: 0x403ca8[pID][3] = 0x0000000d;
+    0x2a6: 0x403ca8[pID][4] = 0x000001d7;
+    0x2d0: if (0x403732[2] != 0xff) then goto 0x2d0 else 0x403732[2] = pID;
+    0x2e5: if (0x403732[2] == ctrn_idx) then 0x403ca7[ctrn_idx][1] = password[2] else goto 0x2e5;
+    0x2ff: 0x403ca8[pID][6] = 0x403ca8[pID][6] ^ 0x403ca8[pID][6];
+    0x30a: 0x403ca8[pID][1] -= 0x403ca8[pID][2];
+    0x315: 0x403ca8[pID][1] = ror(0x403ca8[pID][1], 0x403ca8[pID][3]);
+    0x320: 0x403ca8[pID][6] += 0x403ca8[pID][5];
+    0x32b: 0x403654[pID] = (0x403ca8[pID][6] == 0x403ca8[pID][4]);
+    0x336: if (0x403654[pID] != 0x1) then goto 0x30a;
+    0x34b: if (0x403732[2] != pID) then goto 0x34b else 0x403732[2] = 0xff;
+    0x360: tmp_ecx = ++0x403832[pID][0]; 0x403832[pID][tmp_ecx] = 0x403ca8[pID][1];
+    0x366: 0x403ca8[pID][2] = 0x3950cc83;
+    0x390: 0x403ca8[pID][3] = 0x0000001e;
+    0x3ba: 0x403ca8[pID][4] = 0x00000318;
+    0x3e4: if (0x403732[3] != 0xff) then goto 0x3e4 else 0x403732[3] = pID;
+    0x3f9: if (0x403732[3] == ctrn_idx) then 0x403ca7[ctrn_idx][1] = password[3] else goto 0x3f9;
+    0x413: 0x403ca8[pID][6] = 0x403ca8[pID][6] ^ 0x403ca8[pID][6];
+    0x41e: 0x403ca8[pID][1] -= 0x403ca8[pID][2];
+    0x429: 0x403ca8[pID][1] = ror(0x403ca8[pID][1], 0x403ca8[pID][3]);
+    0x434: 0x403ca8[pID][6] += 0x403ca8[pID][5];
+    0x43f: 0x403654[pID] = (0x403ca8[pID][6] == 0x403ca8[pID][4]);
+    0x44a: if (0x403654[pID] != 0x1) then goto 0x41e;
+    0x45f: if (0x403732[3] != pID) then goto 0x45f else 0x403732[3] = 0xff;
+    0x474: tmp_ecx = ++0x403832[pID][0]; 0x403832[pID][tmp_ecx] = 0x403ca8[pID][1];
+    0x47a: 0x403ca8[pID][2] = 0x604dc3f2;
+    0x4a4: 0x403ca8[pID][3] = 0x00000001;
+    0x4ce: 0x403ca8[pID][4] = 0x0000002b;
+    0x4f8: if (0x403732[4] != 0xff) then goto 0x4f8 else 0x403732[4] = pID;
+    0x50d: if (0x403732[4] == ctrn_idx) then 0x403ca7[ctrn_idx][1] = password[4] else goto 0x50d;
+    0x527: 0x403ca8[pID][6] = 0x403ca8[pID][6] ^ 0x403ca8[pID][6];
+    0x532: 0x403ca8[pID][1] -= 0x403ca8[pID][2];
+    0x53d: 0x403ca8[pID][1] = ror(0x403ca8[pID][1], 0x403ca8[pID][3]);
+    0x548: 0x403ca8[pID][6] += 0x403ca8[pID][5];
+    0x553: 0x403654[pID] = (0x403ca8[pID][6] == 0x403ca8[pID][4]);
+    0x55e: if (0x403654[pID] != 0x1) then goto 0x532;
+    0x573: if (0x403732[4] != pID) then goto 0x573 else 0x403732[4] = 0xff;
+    0x588: tmp_ecx = ++0x403832[pID][0]; 0x403832[pID][tmp_ecx] = 0x403ca8[pID][1];
+    0x58e: 0x403ca8[pID][2] = 0x0b3799a2;
+    0x5b8: 0x403ca8[pID][3] = 0x00000019;
+    0x5e2: 0x403ca8[pID][4] = 0x00000234;
+    0x60c: if (0x403732[5] != 0xff) then goto 0x60c else 0x403732[5] = pID;
+    0x621: if (0x403732[5] == ctrn_idx) then 0x403ca7[ctrn_idx][1] = password[5] else goto 0x621;
+    0x63b: 0x403ca8[pID][6] = 0x403ca8[pID][6] ^ 0x403ca8[pID][6];
+    0x646: 0x403ca8[pID][1] -= 0x403ca8[pID][2];
+    0x651: 0x403ca8[pID][1] = ror(0x403ca8[pID][1], 0x403ca8[pID][3]);
+    0x65c: 0x403ca8[pID][6] += 0x403ca8[pID][5];
+    0x667: 0x403654[pID] = (0x403ca8[pID][6] == 0x403ca8[pID][4]);
+    0x672: if (0x403654[pID] != 0x1) then goto 0x646;
+    0x687: if (0x403732[5] != pID) then goto 0x687 else 0x403732[5] = 0xff;
+    0x69c: tmp_ecx = ++0x403832[pID][0]; 0x403832[pID][tmp_ecx] = 0x403ca8[pID][1];
+    0x6a2: goto 0x6a2;
+
+  Process `3`:
+
+    pID = 3;
+    0x000: 0x403ca8[pID][5] = 0x00000001;
+    0x02a: 0x403ca8[pID][2] = 0x8fd5c5bd;
+    0x054: 0x403ca8[pID][4] = 0x00000028;
+    0x07e: if (0x403732[0] != 0xff) then goto 0x07e else 0x403732[0] = pID;
+    0x093: if (0x403732[0] == ctrn_idx) then 0x403ca7[ctrn_idx][1] = password[0] else goto 0x093;
+    0x0ad: 0x403ca8[pID][6] = 0x403ca8[pID][6] ^ 0x403ca8[pID][6];
+    0x0b8: 0x403ca7[pID][1] = bit_reverse(0x403ca7[pID][1]);
+    0x0be: 0x403ca8[pID][1] = 0x403ca8[pID][2] ^ 0x403ca8[pID][1];
+    0x0c9: 0x403ca8[pID][1] += 0x403ca8[pID][2];
+    0x0d4: 0x403ca8[pID][6] += 0x403ca8[pID][5];
+    0x0df: 0x403654[pID] = (0x403ca8[pID][6] == 0x403ca8[pID][4]);
+    0x0ea: if (0x403654[pID] != 0x1) then goto 0x0b8;
+    0x0ff: if (0x403732[0] != pID) then goto 0x0ff else 0x403732[0] = 0xff;
+    0x114: tmp_ecx = ++0x403832[pID][0]; 0x403832[pID][tmp_ecx] = 0x403ca8[pID][1];
+    0x11a: 0x403ca8[pID][2] = 0x1f817abb;
+    0x144: 0x403ca8[pID][4] = 0x0000014b;
+    0x16e: if (0x403732[1] != 0xff) then goto 0x16e else 0x403732[1] = pID;
+    0x183: if (0x403732[1] == ctrn_idx) then 0x403ca7[ctrn_idx][1] = password[1] else goto 0x183;
+    0x19d: 0x403ca8[pID][6] = 0x403ca8[pID][6] ^ 0x403ca8[pID][6];
+    0x1a8: 0x403ca7[pID][1] = bit_reverse(0x403ca7[pID][1]);
+    0x1ae: 0x403ca8[pID][1] = 0x403ca8[pID][2] ^ 0x403ca8[pID][1];
+    0x1b9: 0x403ca8[pID][1] += 0x403ca8[pID][2];
+    0x1c4: 0x403ca8[pID][6] += 0x403ca8[pID][5];
+    0x1cf: 0x403654[pID] = (0x403ca8[pID][6] == 0x403ca8[pID][4]);
+    0x1da: if (0x403654[pID] != 0x1) then goto 0x1a8;
+    0x1ef: if (0x403732[1] != pID) then goto 0x1ef else 0x403732[1] = 0xff;
+    0x204: tmp_ecx = ++0x403832[pID][0]; 0x403832[pID][tmp_ecx] = 0x403ca8[pID][1];
+    0x20a: 0x403ca8[pID][2] = 0xe8504430;
+    0x234: 0x403ca8[pID][4] = 0x000000cd;
+    0x25e: if (0x403732[2] != 0xff) then goto 0x25e else 0x403732[2] = pID;
+    0x273: if (0x403732[2] == ctrn_idx) then 0x403ca7[ctrn_idx][1] = password[2] else goto 0x273;
+    0x28d: 0x403ca8[pID][6] = 0x403ca8[pID][6] ^ 0x403ca8[pID][6];
+    0x298: 0x403ca7[pID][1] = bit_reverse(0x403ca7[pID][1]);
+    0x29e: 0x403ca8[pID][1] = 0x403ca8[pID][2] ^ 0x403ca8[pID][1];
+    0x2a9: 0x403ca8[pID][1] += 0x403ca8[pID][2];
+    0x2b4: 0x403ca8[pID][6] += 0x403ca8[pID][5];
+    0x2bf: 0x403654[pID] = (0x403ca8[pID][6] == 0x403ca8[pID][4]);
+    0x2ca: if (0x403654[pID] != 0x1) then goto 0x298;
+    0x2df: if (0x403732[2] != pID) then goto 0x2df else 0x403732[2] = 0xff;
+    0x2f4: tmp_ecx = ++0x403832[pID][0]; 0x403832[pID][tmp_ecx] = 0x403ca8[pID][1];
+    0x2fa: 0x403ca8[pID][2] = 0xa6258a12;
+    0x324: 0x403ca8[pID][4] = 0x0000003a;
+    0x34e: if (0x403732[3] != 0xff) then goto 0x34e else 0x403732[3] = pID;
+    0x363: if (0x403732[3] == ctrn_idx) then 0x403ca7[ctrn_idx][1] = password[3] else goto 0x363;
+    0x37d: 0x403ca8[pID][6] = 0x403ca8[pID][6] ^ 0x403ca8[pID][6];
+    0x388: 0x403ca7[pID][1] = bit_reverse(0x403ca7[pID][1]);
+    0x38e: 0x403ca8[pID][1] = 0x403ca8[pID][2] ^ 0x403ca8[pID][1];
+    0x399: 0x403ca8[pID][1] += 0x403ca8[pID][2];
+    0x3a4: 0x403ca8[pID][6] += 0x403ca8[pID][5];
+    0x3af: 0x403654[pID] = (0x403ca8[pID][6] == 0x403ca8[pID][4]);
+    0x3ba: if (0x403654[pID] != 0x1) then goto 0x388;
+    0x3cf: if (0x403732[3] != pID) then goto 0x3cf else 0x403732[3] = 0xff;
+    0x3e4: tmp_ecx = ++0x403832[pID][0]; 0x403832[pID][tmp_ecx] = 0x403ca8[pID][1];
+    0x3ea: 0x403ca8[pID][2] = 0x90bf3d8b;
+    0x414: 0x403ca8[pID][4] = 0x00000178;
+    0x43e: if (0x403732[4] != 0xff) then goto 0x43e else 0x403732[4] = pID;
+    0x453: if (0x403732[4] == ctrn_idx) then 0x403ca7[ctrn_idx][1] = password[4] else goto 0x453;
+    0x46d: 0x403ca8[pID][6] = 0x403ca8[pID][6] ^ 0x403ca8[pID][6];
+    0x478: 0x403ca7[pID][1] = bit_reverse(0x403ca7[pID][1]);
+    0x47e: 0x403ca8[pID][1] = 0x403ca8[pID][2] ^ 0x403ca8[pID][1];
+    0x489: 0x403ca8[pID][1] += 0x403ca8[pID][2];
+    0x494: 0x403ca8[pID][6] += 0x403ca8[pID][5];
+    0x49f: 0x403654[pID] = (0x403ca8[pID][6] == 0x403ca8[pID][4]);
+    0x4aa: if (0x403654[pID] != 0x1) then goto 0x478;
+    0x4bf: if (0x403732[4] != pID) then goto 0x4bf else 0x403732[4] = 0xff;
+    0x4d4: tmp_ecx = ++0x403832[pID][0]; 0x403832[pID][tmp_ecx] = 0x403ca8[pID][1];
+    0x4da: 0x403ca8[pID][2] = 0xc350be97;
+    0x504: 0x403ca8[pID][4] = 0x0000035e;
+    0x52e: if (0x403732[5] != 0xff) then goto 0x52e else 0x403732[5] = pID;
+    0x543: if (0x403732[5] == ctrn_idx) then 0x403ca7[ctrn_idx][1] = password[5] else goto 0x543;
+    0x55d: 0x403ca8[pID][6] = 0x403ca8[pID][6] ^ 0x403ca8[pID][6];
+    0x568: 0x403ca7[pID][1] = bit_reverse(0x403ca7[pID][1]);
+    0x56e: 0x403ca8[pID][1] = 0x403ca8[pID][2] ^ 0x403ca8[pID][1];
+    0x579: 0x403ca8[pID][1] += 0x403ca8[pID][2];
+    0x584: 0x403ca8[pID][6] += 0x403ca8[pID][5];
+    0x58f: 0x403654[pID] = (0x403ca8[pID][6] == 0x403ca8[pID][4]);
+    0x59a: if (0x403654[pID] != 0x1) then goto 0x568;
+    0x5af: if (0x403732[5] != pID) then goto 0x5af else 0x403732[5] = 0xff;
+    0x5c4: tmp_ecx = ++0x403832[pID][0]; 0x403832[pID][tmp_ecx] = 0x403ca8[pID][1];
+    0x5ca: goto 0x5ca;
+
+  Process `4`:
+
+    pID = 4;
+    0x000: 0x403ca8[pID][3] = 0x00000000;
+    0x02a: if (0 < 0x403832[1][0]) then 0x403ca8[pID][0] = 0x403832[1][1] else goto 0x02a;
+    0x035: 0x403ca8[pID][1] = 0x403ca8[pID][0];
+    0x03f: if (0 < 0x403832[2][0]) then 0x403ca8[pID][0] = 0x403832[2][1] else goto 0x03f;
+    0x04a: 0x403ca8[pID][2] = 0x403ca8[pID][0];
+    0x054: 0x403ca8[pID][1] = rol(0x403ca8[pID][1], 0x403ca8[pID][3]);
+    0x05f: 0x403ca8[pID][1] = 0x403ca8[pID][2] ^ 0x403ca8[pID][1];
+    0x06a: tmp_ecx = ++0x403832[pID][0]; 0x403832[pID][tmp_ecx] = 0x403ca8[pID][1];
+    0x070: 0x403ca8[pID][3] = 0x0000001a;
+    0x09a: if (1 < 0x403832[1][0]) then 0x403ca8[pID][0] = 0x403832[1][2] else goto 0x09a;
+    0x0a5: 0x403ca8[pID][1] = 0x403ca8[pID][0];
+    0x0af: if (1 < 0x403832[2][0]) then 0x403ca8[pID][0] = 0x403832[2][2] else goto 0x0af;
+    0x0ba: 0x403ca8[pID][2] = 0x403ca8[pID][0];
+    0x0c4: 0x403ca8[pID][1] = rol(0x403ca8[pID][1], 0x403ca8[pID][3]);
+    0x0cf: 0x403ca8[pID][1] = 0x403ca8[pID][2] ^ 0x403ca8[pID][1];
+    0x0da: tmp_ecx = ++0x403832[pID][0]; 0x403832[pID][tmp_ecx] = 0x403ca8[pID][1];
+    0x0e0: 0x403ca8[pID][3] = 0x00000008;
+    0x10a: if (2 < 0x403832[1][0]) then 0x403ca8[pID][0] = 0x403832[1][3] else goto 0x10a;
+    0x115: 0x403ca8[pID][1] = 0x403ca8[pID][0];
+    0x11f: if (2 < 0x403832[2][0]) then 0x403ca8[pID][0] = 0x403832[2][3] else goto 0x11f;
+    0x12a: 0x403ca8[pID][2] = 0x403ca8[pID][0];
+    0x134: 0x403ca8[pID][1] = rol(0x403ca8[pID][1], 0x403ca8[pID][3]);
+    0x13f: 0x403ca8[pID][1] = 0x403ca8[pID][2] ^ 0x403ca8[pID][1];
+    0x14a: tmp_ecx = ++0x403832[pID][0]; 0x403832[pID][tmp_ecx] = 0x403ca8[pID][1];
+    0x150: 0x403ca8[pID][3] = 0x0000000d;
+    0x17a: if (3 < 0x403832[1][0]) then 0x403ca8[pID][0] = 0x403832[1][4] else goto 0x17a;
+    0x185: 0x403ca8[pID][1] = 0x403ca8[pID][0];
+    0x18f: if (3 < 0x403832[2][0]) then 0x403ca8[pID][0] = 0x403832[2][4] else goto 0x18f;
+    0x19a: 0x403ca8[pID][2] = 0x403ca8[pID][0];
+    0x1a4: 0x403ca8[pID][1] = rol(0x403ca8[pID][1], 0x403ca8[pID][3]);
+    0x1af: 0x403ca8[pID][1] = 0x403ca8[pID][2] ^ 0x403ca8[pID][1];
+    0x1ba: tmp_ecx = ++0x403832[pID][0]; 0x403832[pID][tmp_ecx] = 0x403ca8[pID][1];
+    0x1c0: 0x403ca8[pID][3] = 0x00000010;
+    0x1ea: if (4 < 0x403832[1][0]) then 0x403ca8[pID][0] = 0x403832[1][5] else goto 0x1ea;
+    0x1f5: 0x403ca8[pID][1] = 0x403ca8[pID][0];
+    0x1ff: if (4 < 0x403832[2][0]) then 0x403ca8[pID][0] = 0x403832[2][5] else goto 0x1ff;
+    0x20a: 0x403ca8[pID][2] = 0x403ca8[pID][0];
+    0x214: 0x403ca8[pID][1] = rol(0x403ca8[pID][1], 0x403ca8[pID][3]);
+    0x21f: 0x403ca8[pID][1] = 0x403ca8[pID][2] ^ 0x403ca8[pID][1];
+    0x22a: tmp_ecx = ++0x403832[pID][0]; 0x403832[pID][tmp_ecx] = 0x403ca8[pID][1];
+    0x230: 0x403ca8[pID][3] = 0x0000001e;
+    0x25a: if (5 < 0x403832[1][0]) then 0x403ca8[pID][0] = 0x403832[1][6] else goto 0x25a;
+    0x265: 0x403ca8[pID][1] = 0x403ca8[pID][0];
+    0x26f: if (5 < 0x403832[2][0]) then 0x403ca8[pID][0] = 0x403832[2][6] else goto 0x26f;
+    0x27a: 0x403ca8[pID][2] = 0x403ca8[pID][0];
+    0x284: 0x403ca8[pID][1] = rol(0x403ca8[pID][1], 0x403ca8[pID][3]);
+    0x28f: 0x403ca8[pID][1] = 0x403ca8[pID][2] ^ 0x403ca8[pID][1];
+    0x29a: tmp_ecx = ++0x403832[pID][0]; 0x403832[pID][tmp_ecx] = 0x403ca8[pID][1];
+    0x2a0: goto 0x2a0;
+
+  Process `5`:
+
+    pID = 5;
+    0x000: if (0 < 0x403832[2][0]) then 0x403ca8[pID][0] = 0x403832[2][1] else goto 0x000;
+    0x00b: 0x403ca8[pID][1] = 0x403ca8[pID][0];
+    0x015: if (0 < 0x403832[3][0]) then 0x403ca8[pID][0] = 0x403832[3][1] else goto 0x015;
+    0x020: 0x403ca8[pID][2] = 0x403ca8[pID][0];
+    0x02a: 0x403ca7[pID][2] = bit_reverse(0x403ca7[pID][2]);
+    0x030: 0x403ca8[pID][1] = 0x403ca8[pID][2] ^ 0x403ca8[pID][1];
+    0x03b: tmp_ecx = ++0x403832[pID][0]; 0x403832[pID][tmp_ecx] = 0x403ca8[pID][1];
+    0x041: if (1 < 0x403832[2][0]) then 0x403ca8[pID][0] = 0x403832[2][2] else goto 0x041;
+    0x04c: 0x403ca8[pID][1] = 0x403ca8[pID][0];
+    0x056: if (1 < 0x403832[3][0]) then 0x403ca8[pID][0] = 0x403832[3][2] else goto 0x056;
+    0x061: 0x403ca8[pID][2] = 0x403ca8[pID][0];
+    0x06b: 0x403ca7[pID][2] = bit_reverse(0x403ca7[pID][2]);
+    0x071: 0x403ca8[pID][1] = 0x403ca8[pID][2] ^ 0x403ca8[pID][1];
+    0x07c: tmp_ecx = ++0x403832[pID][0]; 0x403832[pID][tmp_ecx] = 0x403ca8[pID][1];
+    0x082: if (2 < 0x403832[2][0]) then 0x403ca8[pID][0] = 0x403832[2][3] else goto 0x082;
+    0x08d: 0x403ca8[pID][1] = 0x403ca8[pID][0];
+    0x097: if (2 < 0x403832[3][0]) then 0x403ca8[pID][0] = 0x403832[3][3] else goto 0x097;
+    0x0a2: 0x403ca8[pID][2] = 0x403ca8[pID][0];
+    0x0ac: 0x403ca7[pID][2] = bit_reverse(0x403ca7[pID][2]);
+    0x0b2: 0x403ca8[pID][1] = 0x403ca8[pID][2] ^ 0x403ca8[pID][1];
+    0x0bd: tmp_ecx = ++0x403832[pID][0]; 0x403832[pID][tmp_ecx] = 0x403ca8[pID][1];
+    0x0c3: if (3 < 0x403832[2][0]) then 0x403ca8[pID][0] = 0x403832[2][4] else goto 0x0c3;
+    0x0ce: 0x403ca8[pID][1] = 0x403ca8[pID][0];
+    0x0d8: if (3 < 0x403832[3][0]) then 0x403ca8[pID][0] = 0x403832[3][4] else goto 0x0d8;
+    0x0e3: 0x403ca8[pID][2] = 0x403ca8[pID][0];
+    0x0ed: 0x403ca7[pID][2] = bit_reverse(0x403ca7[pID][2]);
+    0x0f3: 0x403ca8[pID][1] = 0x403ca8[pID][2] ^ 0x403ca8[pID][1];
+    0x0fe: tmp_ecx = ++0x403832[pID][0]; 0x403832[pID][tmp_ecx] = 0x403ca8[pID][1];
+    0x104: if (4 < 0x403832[2][0]) then 0x403ca8[pID][0] = 0x403832[2][5] else goto 0x104;
+    0x10f: 0x403ca8[pID][1] = 0x403ca8[pID][0];
+    0x119: if (4 < 0x403832[3][0]) then 0x403ca8[pID][0] = 0x403832[3][5] else goto 0x119;
+    0x124: 0x403ca8[pID][2] = 0x403ca8[pID][0];
+    0x12e: 0x403ca7[pID][2] = bit_reverse(0x403ca7[pID][2]);
+    0x134: 0x403ca8[pID][1] = 0x403ca8[pID][2] ^ 0x403ca8[pID][1];
+    0x13f: tmp_ecx = ++0x403832[pID][0]; 0x403832[pID][tmp_ecx] = 0x403ca8[pID][1];
+    0x145: if (5 < 0x403832[2][0]) then 0x403ca8[pID][0] = 0x403832[2][6] else goto 0x145;
+    0x150: 0x403ca8[pID][1] = 0x403ca8[pID][0];
+    0x15a: if (5 < 0x403832[3][0]) then 0x403ca8[pID][0] = 0x403832[3][6] else goto 0x15a;
+    0x165: 0x403ca8[pID][2] = 0x403ca8[pID][0];
+    0x16f: 0x403ca7[pID][2] = bit_reverse(0x403ca7[pID][2]);
+    0x175: 0x403ca8[pID][1] = 0x403ca8[pID][2] ^ 0x403ca8[pID][1];
+    0x180: tmp_ecx = ++0x403832[pID][0]; 0x403832[pID][tmp_ecx] = 0x403ca8[pID][1];
+    0x186: goto 0x186;
+
+  Process `6`:
+
+    pID = 6;
+    0x000: 0x403ca8[pID][3] = 0x00000017;
+    0x02a: if (0 < 0x403832[4][0]) then 0x403ca8[pID][0] = 0x403832[4][1] else goto 0x02a;
+    0x035: 0x403ca8[pID][1] = 0x403ca8[pID][0];
+    0x03f: if (0 < 0x403832[5][0]) then 0x403ca8[pID][0] = 0x403832[5][1] else goto 0x03f;
+    0x04a: 0x403ca8[pID][2] = 0x403ca8[pID][0];
+    0x054: 0x403ca8[pID][1] = rol(0x403ca8[pID][1], 0x403ca8[pID][3]);
+    0x05f: 0x403ca8[pID][1] = 0x403ca8[pID][2] ^ 0x403ca8[pID][1];
+    0x06a: 0x403ca7[pID][1] = bit_reverse(0x403ca7[pID][1]);
+    0x070: tmp_ecx = ++0x403832[pID][0]; 0x403832[pID][tmp_ecx] = 0x403ca8[pID][1];
+    0x076: if (1 < 0x403832[4][0]) then 0x403ca8[pID][0] = 0x403832[4][2] else goto 0x076;
+    0x081: 0x403ca8[pID][1] = 0x403ca8[pID][0];
+    0x08b: if (1 < 0x403832[5][0]) then 0x403ca8[pID][0] = 0x403832[5][2] else goto 0x08b;
+    0x096: 0x403ca8[pID][2] = 0x403ca8[pID][0];
+    0x0a0: 0x403ca8[pID][1] = rol(0x403ca8[pID][1], 0x403ca8[pID][3]);
+    0x0ab: 0x403ca8[pID][1] = 0x403ca8[pID][2] ^ 0x403ca8[pID][1];
+    0x0b6: 0x403ca7[pID][1] = bit_reverse(0x403ca7[pID][1]);
+    0x0bc: tmp_ecx = ++0x403832[pID][0]; 0x403832[pID][tmp_ecx] = 0x403ca8[pID][1];
+    0x0c2: if (2 < 0x403832[4][0]) then 0x403ca8[pID][0] = 0x403832[4][3] else goto 0x0c2;
+    0x0cd: 0x403ca8[pID][1] = 0x403ca8[pID][0];
+    0x0d7: if (2 < 0x403832[5][0]) then 0x403ca8[pID][0] = 0x403832[5][3] else goto 0x0d7;
+    0x0e2: 0x403ca8[pID][2] = 0x403ca8[pID][0];
+    0x0ec: 0x403ca8[pID][1] = rol(0x403ca8[pID][1], 0x403ca8[pID][3]);
+    0x0f7: 0x403ca8[pID][1] = 0x403ca8[pID][2] ^ 0x403ca8[pID][1];
+    0x102: 0x403ca7[pID][1] = bit_reverse(0x403ca7[pID][1]);
+    0x108: tmp_ecx = ++0x403832[pID][0]; 0x403832[pID][tmp_ecx] = 0x403ca8[pID][1];
+    0x10e: if (3 < 0x403832[4][0]) then 0x403ca8[pID][0] = 0x403832[4][4] else goto 0x10e;
+    0x119: 0x403ca8[pID][1] = 0x403ca8[pID][0];
+    0x123: if (3 < 0x403832[5][0]) then 0x403ca8[pID][0] = 0x403832[5][4] else goto 0x123;
+    0x12e: 0x403ca8[pID][2] = 0x403ca8[pID][0];
+    0x138: 0x403ca8[pID][1] = rol(0x403ca8[pID][1], 0x403ca8[pID][3]);
+    0x143: 0x403ca8[pID][1] = 0x403ca8[pID][2] ^ 0x403ca8[pID][1];
+    0x14e: 0x403ca7[pID][1] = bit_reverse(0x403ca7[pID][1]);
+    0x154: tmp_ecx = ++0x403832[pID][0]; 0x403832[pID][tmp_ecx] = 0x403ca8[pID][1];
+    0x15a: if (4 < 0x403832[4][0]) then 0x403ca8[pID][0] = 0x403832[4][5] else goto 0x15a;
+    0x165: 0x403ca8[pID][1] = 0x403ca8[pID][0];
+    0x16f: if (4 < 0x403832[5][0]) then 0x403ca8[pID][0] = 0x403832[5][5] else goto 0x16f;
+    0x17a: 0x403ca8[pID][2] = 0x403ca8[pID][0];
+    0x184: 0x403ca8[pID][1] = rol(0x403ca8[pID][1], 0x403ca8[pID][3]);
+    0x18f: 0x403ca8[pID][1] = 0x403ca8[pID][2] ^ 0x403ca8[pID][1];
+    0x19a: 0x403ca7[pID][1] = bit_reverse(0x403ca7[pID][1]);
+    0x1a0: tmp_ecx = ++0x403832[pID][0]; 0x403832[pID][tmp_ecx] = 0x403ca8[pID][1];
+    0x1a6: if (5 < 0x403832[4][0]) then 0x403ca8[pID][0] = 0x403832[4][6] else goto 0x1a6;
+    0x1b1: 0x403ca8[pID][1] = 0x403ca8[pID][0];
+    0x1bb: if (5 < 0x403832[5][0]) then 0x403ca8[pID][0] = 0x403832[5][6] else goto 0x1bb;
+    0x1c6: 0x403ca8[pID][2] = 0x403ca8[pID][0];
+    0x1d0: 0x403ca8[pID][1] = rol(0x403ca8[pID][1], 0x403ca8[pID][3]);
+    0x1db: 0x403ca8[pID][1] = 0x403ca8[pID][2] ^ 0x403ca8[pID][1];
+    0x1e6: 0x403ca7[pID][1] = bit_reverse(0x403ca7[pID][1]);
+    0x1ec: tmp_ecx = ++0x403832[pID][0]; 0x403832[pID][tmp_ecx] = 0x403ca8[pID][1];
+    0x1f2: check_password(0x403832);
 
   <!--Well, no comment..., we have not any single idea about the underlying motivationideas of the authors when design this obscure instruction set :-)-->
 

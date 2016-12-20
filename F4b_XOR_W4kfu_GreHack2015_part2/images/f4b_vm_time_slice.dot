@@ -28,4 +28,6 @@ digraph G {
   1 -> 3 [fontsize=7, label="zf=0", style="dashed"];
   2 -> 3 [fontsize=7, label="", style="solid"];
   3 -> 0 [fontsize=7, label="", style="dotted"];
+
+  {rank=same; 2; 3;};
 }

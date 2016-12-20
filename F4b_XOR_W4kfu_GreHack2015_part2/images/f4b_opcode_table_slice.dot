@@ -50,4 +50,6 @@ digraph G {
   4 -> 5 [fontsize=7, label="", style="solid"];
   5 -> 6 [fontsize=7, label="", style="solid"];
   6 -> 0 [fontsize=7, label="", style="dotted"];
+
+  { rank=same; 4; 5; 6 };
 }
