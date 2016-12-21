@@ -129,7 +129,7 @@
 
 #### Multitasking ####
 
-  These concurrent VM(s) can be seen as concurrent (virtual) processes, we then call the `opcode table ID` `VpID` hereafter. [Observing](#dispatchercfg) that if the value of `al` in the instruction at `0x044568` is not `5` then `VpID` is kept, and so does the opcode table address; the  bit-level offset (i.e. the instruction pointer) is not extracted (resp. updated) from (resp. to) the instruction pointer table (i.e. `word` array at `0x403048`), it is simply increased when data is extracted from the corresponding opcode table. Otherwise, the `VpID` is periodically increased, and the corresponding opcode table as well as `instruction pointer` will be used. In other words, if `al` is not `5` then the same 
+  These concurrent VM(s) can be seen as concurrent (virtual) processes, we then call the `opcode table ID` `VpID` hereafter. [Observing](#dispatchercfg) that if the value of `al` in the instruction at `0x044568` is not `5` then `VpID` is kept, and so does the opcode table address; the  bit-level offset (i.e. the instruction pointer) is not extracted (resp. updated) from (resp. to) the instruction pointer table (i.e. `word` array at `0x403048`), it is simply increased when data is extracted from the corresponding opcode table. Otherwise, the `VpID` is periodically increased, and the corresponding opcode table as well as `instruction pointer` will be used. In other words, if `al` is not `5` then the same
 
   We notice that the value above of `al` is extracted as the `byte` value at `0x403041`, slicing the dispatcher with respect to this `byte`, we receive the [control flow graph](#timeslicingcfg) below. It shows that each virtual machine will *execute exactly `5` opcodes*, then switch to the periodically next virtual machine. This is nothing but a **preemptive multitasking** execution model of `7` processes, each has a time-slice of `5` instructions.
 
@@ -161,7 +161,7 @@
 
   We have reversed the instruction (i.e. opcode) tables of all processes. Our purpose is to completely *decompile* them, then the natural next step is to reverse the instruction set of the virtual machine.
 
-  As previously noticed, the instruction handlers are located at "bottom" basic blocks. We observe also that the "bit extraction" [pattern](#bitlevelaccess) appears all over these blocks, this is no surprise: the VM uses the pattern to extract instructions (in the instruction tables), each consists in several consecutive bits. 
+  As previously noticed, the instruction handlers are located at "bottom" basic blocks. We observe also that the "bit extraction" [pattern](#bitlevelaccess) appears all over these blocks, this is no surprise: the VM uses the pattern to extract instructions (in the instruction tables), each consists in several consecutive bits.
   <!--It is a repetitive task in presenting step-by-step how instructions are extracted, moreover some of them have similar semantics; so we will present below how they are classified into several class and the format of each.-->
 
 #### Instruction classes ####
@@ -172,7 +172,7 @@
   ![Control flow graph](images/f4b_vm1_cfg.svg)
   </a>
 
-  Below, let `vI` denote a value `v` of `I` bit, each instruction is denoted by it syntax  (e.g. `00|v16|v3` consists of instructions having first `2` bits `0`, then some value encoded in `16` bits, and some value encoded in `3` bits), and let `pID` denotes the `byte` value stored in `[0x403ca7]`. The semantics of instructions in each class is revealed in the following pseudo code C.
+  Below, let `vI` denote a value `v` of `I` bit, each instruction is denoted by it syntax  (e.g. `00|v16|v3` consists of instructions having first `2` bits `0`, then some value encoded in `16` bits, and some value encoded in `3` bits). `pID` denotes the `byte` value stored in `[0x403ca7]` and `0x403ca8[i][j]` is a `dword` element of the array `7x7` starting from `0x403ca8`. The semantics of instructions in each class is revealed in the following pseudo code C.
 
   * `00|v16|v3`:
    + `00|a16|000`: `if (0x403654[pID] == 0x1) then goto a16`
@@ -205,7 +205,7 @@ where `password` is nothing but the buffer at `0x403198` containing the input pa
 
 ### Disasembling and decompiling ###
 
-  We know both *syntax and semantics* of the instruction set. Moreover, the opcode table and entry point of each virtual process have been [reversed](#virtualprocesssummary); we then implement a *recursive traversal* disassembler which gives the following result (the numbers on the left are bit-offsets of instructions):
+  We now know both *syntax and semantics* of the instruction set, the *opcode table* and *entry point* of each virtual process have been also [revealed](#virtualprocesssummary), we then implement a [recursive traversal disassembler](http://dl.acm.org/citation.cfm?id=885138) which gives the following result (the numbers on the left are bit-offsets of instructions):
 
   Process `0`:
 
@@ -647,9 +647,201 @@ where `password` is nothing but the buffer at `0x403198` containing the input pa
     0x1ec: tmp_ecx = ++0x403832[6][0]; 0x403832[6][tmp_ecx] = 0x403ca8[6][1];
     0x1f2: check_password(0x403832);
 
+
+#### Decompilation ####
+
+  We doubt that anyone want to read this crap :-), but it is not hard to make it more comprehensible. First, each process `i` has some "local" variables as `dword` elements of the array `0x403ca8[i][...]`, we can apply the [constant propagation](http://www.compileroptimizations.com/category/constant_propagation.htm) and [liveness analysis](https://en.wikipedia.org/wiki/Live_variable_analysis) on these variables. We can even recognize high-level loops, for example, the following instructions in the process `1`:
+
+    0x000: 0x403ca8[1][5] = 0x00000001;
+    ...
+    0x07e: 0x403ca8[1][4] = 0x0000036d;
+    ...
+    0x0e2: 0x403ca8[1][1] = 0x403ca8[1][2] ^ 0x403ca8[1][1];
+    0x0ed: 0x403ca8[1][1] = rol(0x403ca8[1][1], 0x403ca8[1][3]);
+    0x0f8: 0x403ca8[1][6] += 0x403ca8[1][5];
+    0x103: 0x403654[1] = (0x403ca8[1][6] == 0x403ca8[1][4]);
+    0x10e: if (0x403654[1] != 0x01) then goto 0x0e2;
+    ...
+
+  can be interpreted as
+
+    ...
+    for (i = 0; i < 0x36d; ++i) {
+      0x403ca8[1][1] = 0x403ca8[1][2] ^ 0x403ca8[1][1];
+      0x403ca8[1][1] = rol(0x403ca8[1][1], 0x403ca8[1][3]);
+    }
+    ...
+
+  Next, these processes have some "shared" variables as `dword` elements of of the array `0x403832[..][..]`. Finally, the shared `dword` elements `0x403732[j]` for `j = 0..5` can be interpreted as [mutex](https://en.wikipedia.org/wiki/Mutual_exclusion) keeping the atomicity of some operations. We then can decompile the processes above as:
+
+  Process `0`:
+
+    P(mutex0);
+    password[0] += 0x550342b8;
+    V(mutex0);
+
+    P(mutex1);
+    password[1] += 0xe3348f8b;
+    V(mutex1);
+
+    P(mutex2);
+    password[2] += 0x58c85bdd;
+    V(mutex2);
+
+    P(mutex3);
+    password[3] += 0x7406e41c;
+    V(mutex3);
+
+    P(mutex4);
+    password[4] += 0x72ece789;
+    V(mutex4);
+
+    P(mutex5);
+    password[5] += 0xefa2f7ec;
+    V(mutex5);
+
+  Process `1`:
+
+    P(mutex0);
+    for (v = password[0], i = 0; i < 0x36d; ++i) {
+      v ^= 0x6dc555e2; v = ror(v, 0x1f);
+    }
+    V(mutex0);
+    tmp = ++vshared[1][0]; vshared[1][tmp] = v;
+
+    P(mutex1);
+    for (v = password[1], i = 0; i < 0x305; ++i) {
+      v ^= 0x668471f5; v = rol(v, 0x13);
+    }
+    V(mutex1);
+    tmp = ++vshared[1][0]; vshared[1][tmp] = v;
+
+    P(mutex2);
+    for (v = password[2], i = 0; i < 0x1e6; ++i) {
+      v ^= 0x21f8a104; v1 = rol(v, 0x10);
+    }
+    V(mutex2);
+    tmp = ++vshared[1][0]; vshared[1][tmp] = v;
+
+    P(mutex3);
+    for (v = password[3], i = 0; i < 0x1d5; ++i) {
+      v ^= 0x0d665e60; v = rol(v1, 0x1a);
+    }
+    V(mutex3);
+    tmp = ++vshared[1][0]; vshared[1][tmp] = v1;
+
+    P(mutex4);
+    for (v = password[4], i = 0; i < 0xcc; ++i) {
+      v ^= 0x69fd3480; v = rol(v, 0x7);
+    }
+    V(mutex4);
+    tmp = ++vshared[1][0]; vshared[1][tmp] = v1;
+
+    P(mutex5);
+    for (v = password[5], i = 0; i < 0x25d; ++i) {
+      v ^= 0xe4b8c392; v1 = rol(v, 0x12);
+    }
+    V(mutex5);
+    tmp = ++vshared[1][0]; vshared[1][tmp] = v;
+
+  Process `2`:
+
+    P(mutex0);
+    for (v = password[0], i = 0; i < 0x6e; ++i) {
+      v ^= 0xecf6d571; v = ror(v, 0xe);
+    }
+    tmp = ++vshared[2][0]; vshared[2][tmp] = v;
+    V(mutex0);
+
+    P(mutex1);
+    for (v = password[1], i = 0; i < 0x20d; ++i) {
+      v ^= 0xec829194; v = ror(v, 0x10);
+    }
+    tmp = ++vshared[2][0]; vshared[2][tmp] = v;
+    V(mutex1);
+
+    P(mutex2);
+    for (v = password[2], i = 0; i < 0x1d7; ++i) {
+      v ^= 0x5c167e65; v = ror(v, 0xd);
+    }
+    tmp = ++vshared[2][0]; vshared[2][tmp] = v;
+    V(mutex2);
+
+    P(mutex3);
+    for (v = password[3], i = 0; i < 0x318; ++i) {
+      v ^= 0x3950cc83; v = ror(v, 0x1e);
+    }
+    tmp = ++vshared[2][0]; vshared[2][tmp] = v;
+    V(mutex3);
+
+    P(mutex4);
+    for (v = password[4]; i = 0; i < 0x2b; ++i) {
+      v ^= 0x604dc3f2; v =ror(v, 0x1);
+    }
+    tmp = ++vshared[2][0]; vshared[2][tmp] = v;
+    V(mutex4);
+
+    P(mutex5);
+    for (v = password[4]; i = 0; i < 0x234; ++i) {
+      v ^= 0x0b3799a2; v =ror(v, 0x19);
+    }
+    tmp = ++vshared[2][0]; vshared[2][tmp] = v;
+    V(mutex5);
+
+  Process `3`:
+
+    P(mutex0);
+    for (v = password[0], i = 0; i < 0x28; ++i) {
+      v = 0x8fd5c5bd ^ bit_reverse(v); v += 0x8fd5c5bd;
+    }
+    V(mutex0);
+    tmp = ++vshared[3][0]; vshared[3][tmp] = v;
+
+    P(mutex1);
+    for (v = password[1], i = 0; i < 0x14b; ++i) {
+      v = 0x1f817abb ^ bit_reverse(v); v += 0x1f817abb;
+    }
+    V(mutex1);
+    tmp = ++vshared[3][0]; vshared[3][tmp] = v;
+
+    P(mutex2);
+    for (v = password[2], i = 0; i < 0xcd; ++i) {
+      v = 0xe8504430 ^ bit_reverse(v); v += 0xe8504430;
+    }
+    V(mutex2);
+    tmp = ++vshared[3][0]; vshared[3][tmp] = v;
+
+    P(mutex3);
+    for (v = password[3], i = 0; i < 0x3a; ++i) {
+      v = 0xa6258a12 ^ bit_reverse(v); v += 0xa6258a12;
+    }
+    V(mutex3);
+    tmp = ++vshared[3][0]; vshared[3][tmp] = v;
+
+    P(mutex4);
+    for (v = password[3], i = 0; i < 0x178; ++i) {
+      v = 0x90bf3d8b ^ bit_reverse(v); v += 0x90bf3d8b;
+    }
+    V(mutex4);
+    tmp = ++vshared[3][0]; vshared[3][tmp] = v;
+
+    P(mutex5);
+    for (v = password[3], i = 0; i < 0x35e; ++i) {
+      v = 0xc350be97 ^ bit_reverse(v); v += 0xc350be97;
+    }
+    V(mutex5);
+    tmp = ++vshared[3][0]; vshared[3][tmp] = v;
+
+  Process `4`:
+
+    while (vshared[1][0] <= 0) {};
+
+
+
+
 ### Semantics of concurrent processes ###
 
-  We now obtained     
+  We now obtained
 
   <!--Well, no comment..., we have not any single idea about the underlying motivationideas of the authors when design this obscure instruction set :-)-->
 
