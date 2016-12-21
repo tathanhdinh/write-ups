@@ -650,7 +650,7 @@ where `password` is nothing but the buffer at `0x403198` containing the input pa
 
 #### Decompilation ####
 
-  We doubt that anyone want to read this crap :-), but it is not hard to make it more comprehensible. First, each process `i` has some "local" variables as `dword` elements of the array `0x403ca8[i][...]`, we can apply the [constant propagation](http://www.compileroptimizations.com/category/constant_propagation.htm) and [liveness analysis](https://en.wikipedia.org/wiki/Live_variable_analysis) on these variables. We can even recognize high-level loops, for example, the following instructions in the process `1`:
+  We doubt that anyone wants to read this crap :-), but it is not hard to make it more comprehensible. First, each process `i` has some "local" variables as `dword` elements of the array `0x403ca8[i][...]`, we can apply the [constant propagation](http://www.compileroptimizations.com/category/constant_propagation.htm) and [liveness analysis](https://en.wikipedia.org/wiki/Live_variable_analysis) on these variables. We can even recognize high-level loops, for example, the following instructions in the process `1`:
 
     0x000: 0x403ca8[1][5] = 0x00000001;
     ...
@@ -744,6 +744,8 @@ where `password` is nothing but the buffer at `0x403198` containing the input pa
     V(mutex5);
     tmp = ++vshared[1][0]; vshared[1][tmp] = v;
 
+    while (true) {};
+
   Process `2`:
 
     P(mutex0);
@@ -788,6 +790,8 @@ where `password` is nothing but the buffer at `0x403198` containing the input pa
     tmp = ++vshared[2][0]; vshared[2][tmp] = v;
     V(mutex5);
 
+    while (true) {};
+
   Process `3`:
 
     P(mutex0);
@@ -831,6 +835,8 @@ where `password` is nothing but the buffer at `0x403198` containing the input pa
     }
     V(mutex5);
     tmp = ++vshared[3][0]; vshared[3][tmp] = v;
+
+    while (true) {};
 
   Process `4`:
 
