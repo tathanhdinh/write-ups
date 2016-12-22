@@ -203,7 +203,7 @@ where `password` is nothing but the buffer at `0x403198` containing the input pa
   **Remark:**
   Without an explicit type annotation (e.g. `w` for `word`, `dw` for double `word`, etc.), array access operator `[]` is typed to return `byte`, also types are omitted when they are clear from the context (i.e. can be referenced).
 
-### Disasembling and decompiling ###
+### Disasembling, decompiling and semantics of concurrent processes ###
 
   We now know both *syntax and semantics* of the instruction set, the *opcode table* and *entry point* of each virtual process have been also [revealed](#virtualprocesssummary), we then implement a [recursive traversal disassembler](http://dl.acm.org/citation.cfm?id=885138) which gives the following result (the numbers on the left are bit-offsets of instructions):
 
@@ -647,10 +647,18 @@ where `password` is nothing but the buffer at `0x403198` containing the input pa
     0x1ec: tmp_ecx = ++0x403832[6][0]; 0x403832[6][tmp_ecx] = 0x403ca8[6][1];
     0x1f2: check_password(0x403832);
 
+**Remark:**
+in the previous part of this article, we have stated that the input related instructions are spread over the execution trace. We now can observe, for example, the "virtual instruction" of the process `1`:
+
+    0x0bd: if (0x403732[0] == 0x01) then 0x403ca8[1][1] = password[0] else goto 0x0bd;
+
+which corresponds with the basic block `0x40227f` in the [control flow graph](#controlflowgraph). The occurrences in the trace of this address is show in the following figure:
+
+![Address spreading](images/address_spreading.png)
 
 #### Decompilation ####
 
-  We doubt that anyone wants to read this crap :-), but it is not hard to make it more comprehensible. First, each process `i` has some "local" variables as `dword` elements of the array `0x403ca8[i][...]`, we can apply the [constant propagation](http://www.compileroptimizations.com/category/constant_propagation.htm) and [liveness analysis](https://en.wikipedia.org/wiki/Live_variable_analysis) on these variables. We can even recognize high-level loops, for example, the following instructions in the process `1`:
+  We doubt that anyone wants to read this decompilation crap, just too boring :-), but making it more comprehensible is not hard. First, each process `i` has some "local" variables as `dword` elements of the array `0x403ca8[i][...]`, so we can apply the [constant propagation](http://www.compileroptimizations.com/category/constant_propagation.htm) and [liveness analysis](https://en.wikipedia.org/wiki/Live_variable_analysis) on these variables. There are also high-level loops, for example, the following instructions in the process `1`:
 
     0x000: 0x403ca8[1][5] = 0x00000001;
     ...
@@ -672,7 +680,7 @@ where `password` is nothing but the buffer at `0x403198` containing the input pa
     }
     ...
 
-  Next, these processes have some "shared" variables as `dword` elements of of the array `0x403832[..][..]`. Finally, the shared `dword` elements `0x403732[j]` for `j = 0..5` can be interpreted as [mutex](https://en.wikipedia.org/wiki/Mutual_exclusion) keeping the atomicity of some operations. We then can decompile the processes above as:
+  Next, these processes have some "shared" variables as `dword` elements of of the array `0x403832[..][..]`. Finally, the shared `dword` elements `0x403732[j]` for `j = 0..5` can be interpreted as [mutex](https://en.wikipedia.org/wiki/Mutual_exclusion) keeping the atomicity of some operations. We then can decompile the first `4` processes as:
 
   Process `0`:
 
@@ -700,11 +708,13 @@ where `password` is nothing but the buffer at `0x403198` containing the input pa
     password[5] += 0xefa2f7ec;
     V(mutex5);
 
+    goto entry_point;
+
   Process `1`:
 
     P(mutex0);
     for (v = password[0], i = 0; i < 0x36d; ++i) {
-      v ^= 0x6dc555e2; v = ror(v, 0x1f);
+      v ^= 0x6dc555e2; v = rol(v, 0x1f);
     }
     V(mutex0);
     tmp = ++vshared[1][0]; vshared[1][tmp] = v;
@@ -784,7 +794,7 @@ where `password` is nothing but the buffer at `0x403198` containing the input pa
     V(mutex4);
 
     P(mutex5);
-    for (v = password[4]; i = 0; i < 0x234; ++i) {
+    for (v = password[5]; i = 0; i < 0x234; ++i) {
       v ^= 0x0b3799a2; v =ror(v, 0x19);
     }
     tmp = ++vshared[2][0]; vshared[2][tmp] = v;
@@ -823,14 +833,14 @@ where `password` is nothing but the buffer at `0x403198` containing the input pa
     tmp = ++vshared[3][0]; vshared[3][tmp] = v;
 
     P(mutex4);
-    for (v = password[3], i = 0; i < 0x178; ++i) {
+    for (v = password[4], i = 0; i < 0x178; ++i) {
       v = 0x90bf3d8b ^ bit_reverse(v); v += 0x90bf3d8b;
     }
     V(mutex4);
     tmp = ++vshared[3][0]; vshared[3][tmp] = v;
 
     P(mutex5);
-    for (v = password[3], i = 0; i < 0x35e; ++i) {
+    for (v = password[5], i = 0; i < 0x35e; ++i) {
       v = 0xc350be97 ^ bit_reverse(v); v += 0xc350be97;
     }
     V(mutex5);
@@ -838,16 +848,89 @@ where `password` is nothing but the buffer at `0x403198` containing the input pa
 
     while (true) {};
 
-  Process `4`:
+**Remark:**
+the `dword` values of the `vshared` array (starting at `0x403832`) are initialized by `0`, for example the following figure shows the value of `vshared[1][0]` just before it is increased at the first time:
 
-    while (vshared[1][0] <= 0) {};
+![Initialized values of vshared](images/vshared_init.png)
 
+#### <a name="semantics">Semantics</a> ####
 
+We might remember that there is a [scheduler](#opcodetableslice) in the concurrency model of these processes, this one cyclically switchs the execution from process `0` to process `7`. The processes and the scheduler can be presented in [CCS](https://en.wikipedia.org/wiki/Calculus_of_communicating_systems) as:
 
+    P0 | P1 | P2 | ... | P6 | S
 
-### Semantics of concurrent processes ###
+where `S` is a scheduler (or semaphore) which forbids direct interactions between `Pi`(s), that *trivializes* also the semantics of these processes :-).
 
-  We now obtained
+Indeed, the modification taken on `password[j]` in each process is protected by a separated `mutexj`. But when a mutex is released by some process `Pi`, because of the semaphore `S`, only `Pi+1` can gain the mutex. This property is independent from the input password (or this concurrency model is **deterministic**). Its interleaving semantics is a single trace, for example the trace of the first `4` processes is basically:
+
+    password[0] += 0x550342b8;                         // process 0
+    for (v = password[0], i = 0; i < 0x36d; ++i) {     // process 1
+      v ^= 0x6dc555e2; v = rol(v, 0x1f);
+    }
+    ++vshared[1][0]; ++vshared[1][1] = v;
+    for (v = password[0], i = 0; i < 0x6e; ++i) {      // process 2
+      v ^= 0xecf6d571; v = ror(v, 0xe);
+    }
+    ++vshared[2][0]; vshared[2][1] = v;
+    for (v = password[0], i = 0; i < 0x28; ++i) {      // process 3
+      v = 0x8fd5c5bd ^ bit_reverse(v); v += 0x8fd5c5bd;
+    }
+    ++vshared[3][0]; vshared[3][1] = v;
+    ...
+    password[1] += 0xe3348f8b;                         // process 0
+    ...
+
+  Similarly, we can see that the process `4` is just a [consumer](https://en.wikipedia.org/wiki/Producer%E2%80%93consumer_problem) of  processes `1` and `2` with mutexes `vshared[1][0]` and `vshared[2][0]`, respectively. It consumes `vshared[1][..]` and `vshared[2][..]` as
+
+    v = vshared[2][1] ^ rol(vshared[1][1], 0x0);
+    tmp = ++vshared[4][0]; vshared[4][tmp] = v;
+
+    v = vshared[2][2] ^ rol(vshared[1][2], 0x1a);
+    tmp = ++vshared[4][0]; vshared[4][tmp] = v;
+
+    v = vshared[2][3] ^ rol(vshared[1][3], 0x8);
+    tmp = ++vshared[4][0]; vshared[4][tmp] = v;
+
+    v = vshared[2][4] ^ rol(vshared[1][4], 0xd);
+    tmp = ++vshared[4][0]; vshared[4][tmp] = v;
+
+    v = vshared[2][5] ^ rol(vshared[1][5], 0x10);
+    tmp = ++vshared[4][0]; vshared[4][tmp] = v;
+
+    v = vshared[2][6] ^ rol(vshared[1][6], 0x1e);
+    tmp = ++vshared[4][0]; vshared[4][tmp] = v;
+
+  And process `5` is a consumer of processes `2` and `3`:
+
+    v = bit_reverse(vshared[3][1]) ^ vshared[2][1];
+    tmp = ++vshared[5][0]; vshared[5][tmp] = v;
+    ...
+    v = bit_reverse(vshared[3][6]) ^ vshared[2][6];
+    tmp = ++vshared[5][0]; vshared[5][tmp] = v;
+
+  Finally, the process `6` consumes results of processes `4` and `5` as:
+
+    v = bit_reverse(vshared[5][1] ^ rol(vshared[4][1], 0x17));
+    tmp = ++vshared[6][0]; vshared[6][tmp] = v;
+    ...
+    v = bit_reverse(vshared[5][6] ^ rol(vshared[4][6], 0x17));
+    tmp = ++vshared[6][0]; vshared[6][tmp] = v;
+
+  and it checks the input password as:
+
+    if (vshared[6][1] == 0x73ae5f50 && vshared[6][2] == 0xbd2b6a91 && vshared[6][3] == 0x3e4e9687 && 
+        vshared[6][4] == 0xbcfaadcc && vshared[6][5] == 0xcd2ca810 && vshared[6][6] == 0x9d26237e) {
+      printf("Yes!");
+    }
+    else {
+      printf("Nop!")
+    }
+
+#### Summary ####
+
+  We have completedly reversed the second virtual machine, it is interpreted as a model of `7` concurent processes and a cyclic dispatcher (which is also a semaphore). By reasoning the synchronization between them, we have discovered that this model is *deterministic*, that allows us to obtain a comprehensive [semantics](#semantics).
+
+## Finding the password ##
 
   <!--Well, no comment..., we have not any single idea about the underlying motivationideas of the authors when design this obscure instruction set :-)-->
 
