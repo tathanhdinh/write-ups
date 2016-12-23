@@ -648,17 +648,19 @@ where `password` is nothing but the buffer at `0x403198` containing the input pa
     0x1f2: check_password(0x403832);
 
 **Remark:**
-in the previous part of this article, we have stated that the input related instructions are spread over the execution trace. We now can observe, for example, the "virtual instruction" of the process `1`:
+*in the previous part of this article, we have claimed that the input related instructions are spread over the execution trace. We now can examine, for example, the "virtual instruction" of the process `1`:*
 
     0x0bd: if (0x403732[0] == 0x01) then 0x403ca8[1][1] = password[0] else goto 0x0bd;
 
-which corresponds with the basic block `0x40227f` in the [control flow graph](#controlflowgraph). The occurrences in the trace of this address is show in the following figure:
+*which corresponds with the basic block `0x40227f` in the [control flow graph](#controlflowgraph). From the following figure, we can observe that this virtual instruction is executed `12` times, scattered over a trace of more than two billions instructions.*
 
 ![Address spreading](images/address_spreading.png)
 
+
+
 #### Decompilation ####
 
-  We doubt that anyone wants to read this decompilation crap, just too boring :-), but making it more comprehensible is not hard. First, each process `i` has some "local" variables as `dword` elements of the array `0x403ca8[i][...]`, so we can apply the [constant propagation](http://www.compileroptimizations.com/category/constant_propagation.htm) and [liveness analysis](https://en.wikipedia.org/wiki/Live_variable_analysis) on these variables. There are also high-level loops, for example, the following instructions in the process `1`:
+  We doubt that anyone bothers to read this decompilation crap, just too boring :-); fortunately making it more comprehensible is not hard. First, each process `i` has some "local" variables as `dword` elements of the array `0x403ca8[i][...]`, so we can apply the [constant propagation](http://www.compileroptimizations.com/category/constant_propagation.htm) and [liveness analysis](https://en.wikipedia.org/wiki/Live_variable_analysis) on these variables. There are also high-level loops, for example, the following instructions in the process `1`:
 
     0x000: 0x403ca8[1][5] = 0x00000001;
     ...
@@ -859,7 +861,7 @@ We might remember that there is a [scheduler](#opcodetableslice) in the concurre
 
     P0 | P1 | P2 | ... | P6 | S
 
-where `S` is a scheduler (or semaphore) which forbids direct interactions between `Pi`(s), that *trivializes* also the semantics of these processes :-).
+where `S` is a scheduler (or semaphore) which forbids direct interactions between `Pi`(s), that *trivializes* also the semantics of these processes.
 
 Indeed, the modification taken on `password[j]` in each process is protected by a separated `mutexj`. But when a mutex is released by some process `Pi`, because of the semaphore `S`, only `Pi+1` can gain the mutex. This property is independent from the input password (or this concurrency model is **deterministic**). Its interleaving semantics is a single trace, for example the trace of the first `4` processes is basically:
 
@@ -918,7 +920,7 @@ Indeed, the modification taken on `password[j]` in each process is protected by 
 
   and it checks the input password as:
 
-    if (vshared[6][1] == 0x73ae5f50 && vshared[6][2] == 0xbd2b6a91 && vshared[6][3] == 0x3e4e9687 && 
+    if (vshared[6][1] == 0x73ae5f50 && vshared[6][2] == 0xbd2b6a91 && vshared[6][3] == 0x3e4e9687 &&
         vshared[6][4] == 0xbcfaadcc && vshared[6][5] == 0xcd2ca810 && vshared[6][6] == 0x9d26237e) {
       printf("Yes!");
     }
@@ -926,11 +928,49 @@ Indeed, the modification taken on `password[j]` in each process is protected by 
       printf("Nop!")
     }
 
+  ![Password checking procedure](images/password_checking.png)
+
 #### Summary ####
 
   We have completedly reversed the second virtual machine, it is interpreted as a model of `7` concurent processes and a cyclic dispatcher (which is also a semaphore). By reasoning the synchronization between them, we have discovered that this model is *deterministic*, that allows us to obtain a comprehensive [semantics](#semantics).
 
 ## Finding the password ##
+
+  The final checking procedure is simple, it just compares each `vshared[6][i]` (for `i = 1..6`) witch a specific constant. Moreover `vshared[6][i]` is indeed calculated from `password[i]` under the following scheme:
+
+  ![Password calculation diagram](images/password_diagram.svg)
+
+  In each process, noises are added *separately* into `password[i]` to transform it to a new value. All details have been already revealed above, for example, when `i = 0` we have:
+
+    process 0:
+      password[0] += 0x550342b8;
+
+    process 1:
+      for (v = password[0], i = 0; i < 0x36d; ++i) {
+        v ^= 0x6dc555e2; v = rol(v, 0x1f);
+      }
+      output1 = v;
+
+    process 2:
+      for (v = password[0], i = 0; i < 0x6e; ++i) {
+        v ^= 0xecf6d571; v = ror(v, 0xe);
+      }
+      output2 = v
+
+    process 3:
+      for (v = password[0], i = 0; i < 0x28; ++i) {
+        v = 0x8fd5c5bd ^ bit_reverse(v); v += 0x8fd5c5bd;
+      }
+      output3 = v;
+
+    process 4:
+      v = output2 ^ rol(output1, 0x0);
+      output4 = v;
+
+    ...
+
+
+  This kind of transformation is well known as **mixed boolean arithmetic** which have been [introduced](https://www.researchgate.net/publication/221239701_Information_Hiding_in_Software_with_Mixed_Boolean-Arithmetic_Transforms) to obfuscate softwares.
 
   <!--Well, no comment..., we have not any single idea about the underlying motivationideas of the authors when design this obscure instruction set :-)-->
 
