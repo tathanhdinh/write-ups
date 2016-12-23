@@ -1,0 +1,9 @@
+C:\Users\Ta Thanh Dinh\Documents\GitHub\write-ups\f4b_xor_w4kfu_keygen\bin\Debug\f4b_xor_w4kfu_keygen.exe.config
+C:\Users\Ta Thanh Dinh\Documents\GitHub\write-ups\f4b_xor_w4kfu_keygen\bin\Debug\f4b_xor_w4kfu_keygen.exe
+C:\Users\Ta Thanh Dinh\Documents\GitHub\write-ups\f4b_xor_w4kfu_keygen\bin\Debug\f4b_xor_w4kfu_keygen.pdb
+C:\Users\Ta Thanh Dinh\Documents\GitHub\write-ups\f4b_xor_w4kfu_keygen\obj\Debug\f4b_xor_w4kfu_keygen.csprojResolveAssemblyReference.cache
+C:\Users\Ta Thanh Dinh\Documents\GitHub\write-ups\f4b_xor_w4kfu_keygen\obj\Debug\f4b_xor_w4kfu_keygen.exe
+C:\Users\Ta Thanh Dinh\Documents\GitHub\write-ups\f4b_xor_w4kfu_keygen\obj\Debug\f4b_xor_w4kfu_keygen.pdb
+C:\Users\Ta Thanh Dinh\Documents\GitHub\write-ups\f4b_xor_w4kfu_keygen\bin\Debug\Microsoft.Z3.dll
+C:\Users\Ta Thanh Dinh\Documents\GitHub\write-ups\f4b_xor_w4kfu_keygen\bin\Debug\Microsoft.Z3.xml
+C:\Users\Ta Thanh Dinh\Documents\GitHub\write-ups\f4b_xor_w4kfu_keygen\bin\Debug\libz3.dll

@@ -62,8 +62,6 @@
 
   This bit-level data extracting pattern is repeated at other blocks, the control flow is diverted by `test ebx, ...` instructions depending on the extracted value. More concretely, for each "kind" of the extracted data, there is a unique corresponding operator that is consisted in a single block (e.g. ones at `0x402250`, `0x40263c`, etc.), or in several blocks (e.g. one consisted of blocks at `0x404d6`, `0x402572`, `0x402573`, `0x404331`, etc.). That is a "strong" indication of a virtual machine (well, "strong" but it is just a guesswork, actually).
 
-
-<!-- #### Multitasking virtual machine #### -->
 #### Opcode tables ####
 
   We now examine the array where bit-level data is extracted (i.e. the opcode table). First, noticing that the bit-offset is typed as `word` value at `0x403042`. Moreover, the address of the opcode table is indexed by `eax` in a `dword` array at `0x40268b`:
@@ -164,8 +162,6 @@
   As previously noticed, the instruction handlers are located at "bottom" basic blocks. We observe also that the "bit extraction" [pattern](#bitlevelaccess) appears all over these blocks, this is no surprise: the VM uses the pattern to extract instructions (in the instruction tables), each consists in several consecutive bits.
   <!--It is a repetitive task in presenting step-by-step how instructions are extracted, moreover some of them have similar semantics; so we will present below how they are classified into several class and the format of each.-->
 
-#### Instruction classes ####
-
   Following the *instruction format*, the instruction set can be divided into `4` classes; we illustrate each class by a color in the following [control flow graph](#controlflowgraph): the basic blocks handling the instructions of the same class have assigned the same color.
 
   <a  id="controlflowgraph">
@@ -203,9 +199,13 @@ where `password` is nothing but the buffer at `0x403198` containing the input pa
   **Remark:**
   Without an explicit type annotation (e.g. `w` for `word`, `dw` for double `word`, etc.), array access operator `[]` is typed to return `byte`, also types are omitted when they are clear from the context (i.e. can be referenced).
 
-### Disasembling, decompiling and semantics of concurrent processes ###
+### Disasembling, decompiling and semantics ###
 
-  We now know both *syntax and semantics* of the instruction set, the *opcode table* and *entry point* of each virtual process have been also [revealed](#virtualprocesssummary), we then implement a [recursive traversal disassembler](http://dl.acm.org/citation.cfm?id=885138) which gives the following result (the numbers on the left are bit-offsets of instructions):
+  Both *syntax and semantics* of the instruction set, the *opcode table* and *entry point* of each virtual process have been  [revealed](#virtualprocesssummary).
+
+#### Disasembling ####
+
+  We then implement a [recursive traversal disassembler](http://dl.acm.org/citation.cfm?id=885138) which gives the following result (the numbers on the left are bit-offsets of instructions):
 
   Process `0`:
 
@@ -855,7 +855,7 @@ the `dword` values of the `vshared` array (starting at `0x403832`) are initializ
 
 ![Initialized values of vshared](images/vshared_init.png)
 
-#### <a name="semantics">Semantics</a> ####
+#### <a name="semantics">Semantics of concurrent processes</a> ####
 
 We might remember that there is a [scheduler](#opcodetableslice) in the concurrency model of these processes, this one cyclically switchs the execution from process `0` to process `7`. The processes and the scheduler can be presented in [CCS](https://en.wikipedia.org/wiki/Calculus_of_communicating_systems) as:
 
@@ -936,7 +936,7 @@ Indeed, the modification taken on `password[j]` in each process is protected by 
 
 ## Finding the password ##
 
-  The final checking procedure is simple, it just compares each `vshared[6][i]` (for `i = 1..6`) witch a specific constant. Moreover `vshared[6][i]` is indeed calculated from `password[i]` under the following scheme:
+  The final checking procedure just compares each `vshared[6][i]` (for `i = 1..6`) witch a specific constant. We can observe that `vshared[6][i]` is indeed calculated from `password[i]` under the following scheme:
 
   ![Password calculation diagram](images/password_diagram.svg)
 
@@ -970,7 +970,7 @@ Indeed, the modification taken on `password[j]` in each process is protected by 
     ...
 
 
-  This kind of transformation is well known as **mixed boolean arithmetic** which have been [introduced](https://www.researchgate.net/publication/221239701_Information_Hiding_in_Software_with_Mixed_Boolean-Arithmetic_Transforms) to obfuscate softwares.
+  This kind of transformation is well known as **mixed boolean arithmetic** which has been [introduced](https://www.researchgate.net/publication/221239701_Information_Hiding_in_Software_with_Mixed_Boolean-Arithmetic_Transforms) to obfuscate softwares.
 
   <!--Well, no comment..., we have not any single idea about the underlying motivationideas of the authors when design this obscure instruction set :-)-->
 

@@ -1,0 +1,8 @@
+C:\Users\Ta Thanh Dinh\Documents\GitHub\write-ups\f4b_xor_w4kfu_keygen\bin\Release\f4b_xor_w4kfu_keygen.exe.config
+C:\Users\Ta Thanh Dinh\Documents\GitHub\write-ups\f4b_xor_w4kfu_keygen\bin\Release\f4b_xor_w4kfu_keygen.exe
+C:\Users\Ta Thanh Dinh\Documents\GitHub\write-ups\f4b_xor_w4kfu_keygen\bin\Release\f4b_xor_w4kfu_keygen.pdb
+C:\Users\Ta Thanh Dinh\Documents\GitHub\write-ups\f4b_xor_w4kfu_keygen\bin\Release\Microsoft.Z3.dll
+C:\Users\Ta Thanh Dinh\Documents\GitHub\write-ups\f4b_xor_w4kfu_keygen\bin\Release\Microsoft.Z3.xml
+C:\Users\Ta Thanh Dinh\Documents\GitHub\write-ups\f4b_xor_w4kfu_keygen\bin\Release\libz3.dll
+C:\Users\Ta Thanh Dinh\Documents\GitHub\write-ups\f4b_xor_w4kfu_keygen\obj\Release\f4b_xor_w4kfu_keygen.exe
+C:\Users\Ta Thanh Dinh\Documents\GitHub\write-ups\f4b_xor_w4kfu_keygen\obj\Release\f4b_xor_w4kfu_keygen.pdb
