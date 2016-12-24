@@ -656,8 +656,6 @@ where `password` is nothing but the buffer at `0x403198` containing the input pa
 
 ![Address spreading](images/address_spreading.png)
 
-
-
 #### Decompilation ####
 
   We doubt that anyone bothers to read this decompilation crap, just too boring :-); fortunately making it more comprehensible is not hard. First, each process `i` has some "local" variables as `dword` elements of the array `0x403ca8[i][...]`, so we can apply the [constant propagation](http://www.compileroptimizations.com/category/constant_propagation.htm) and [liveness analysis](https://en.wikipedia.org/wiki/Live_variable_analysis) on these variables. There are also high-level loops, for example, the following instructions in the process `1`:
@@ -762,42 +760,42 @@ where `password` is nothing but the buffer at `0x403198` containing the input pa
 
     P(mutex0);
     for (v = password[0], i = 0; i < 0x6e; ++i) {
-      v ^= 0xecf6d571; v = ror(v, 0xe);
+      v -= 0xecf6d571; v = ror(v, 0xe);
     }
     tmp = ++vshared[2][0]; vshared[2][tmp] = v;
     V(mutex0);
 
     P(mutex1);
     for (v = password[1], i = 0; i < 0x20d; ++i) {
-      v ^= 0xec829194; v = ror(v, 0x10);
+      v -= 0xec829194; v = ror(v, 0x10);
     }
     tmp = ++vshared[2][0]; vshared[2][tmp] = v;
     V(mutex1);
 
     P(mutex2);
     for (v = password[2], i = 0; i < 0x1d7; ++i) {
-      v ^= 0x5c167e65; v = ror(v, 0xd);
+      v -= 0x5c167e65; v = ror(v, 0xd);
     }
     tmp = ++vshared[2][0]; vshared[2][tmp] = v;
     V(mutex2);
 
     P(mutex3);
     for (v = password[3], i = 0; i < 0x318; ++i) {
-      v ^= 0x3950cc83; v = ror(v, 0x1e);
+      v -= 0x3950cc83; v = ror(v, 0x1e);
     }
     tmp = ++vshared[2][0]; vshared[2][tmp] = v;
     V(mutex3);
 
     P(mutex4);
     for (v = password[4]; i = 0; i < 0x2b; ++i) {
-      v ^= 0x604dc3f2; v =ror(v, 0x1);
+      v -= 0x604dc3f2; v =ror(v, 0x1);
     }
     tmp = ++vshared[2][0]; vshared[2][tmp] = v;
     V(mutex4);
 
     P(mutex5);
     for (v = password[5]; i = 0; i < 0x234; ++i) {
-      v ^= 0x0b3799a2; v =ror(v, 0x19);
+      v -= 0x0b3799a2; v =ror(v, 0x19);
     }
     tmp = ++vshared[2][0]; vshared[2][tmp] = v;
     V(mutex5);
@@ -871,7 +869,7 @@ Indeed, the modification taken on `password[j]` in each process is protected by 
     }
     ++vshared[1][0]; ++vshared[1][1] = v;
     for (v = password[0], i = 0; i < 0x6e; ++i) {      // process 2
-      v ^= 0xecf6d571; v = ror(v, 0xe);
+      v -= 0xecf6d571; v = ror(v, 0xe);
     }
     ++vshared[2][0]; vshared[2][1] = v;
     for (v = password[0], i = 0; i < 0x28; ++i) {      // process 3
@@ -953,7 +951,7 @@ Indeed, the modification taken on `password[j]` in each process is protected by 
 
     process 2:
       for (v = password[0], i = 0; i < 0x6e; ++i) {
-        v ^= 0xecf6d571; v = ror(v, 0xe);
+        v -= 0xecf6d571; v = ror(v, 0xe);
       }
       output2 = v
 
