@@ -204,7 +204,7 @@ namespace f4b_xor_w4kfu_keygen
       //var tmpCond = z3Ctxt.MkEq(output3[0], z3Ctxt.MkBV(0x2a918342, 32));
       //z3Solver.Assert(tmpCond);
 
-      var output4 = process4(ref z3Ctxt, output1, output2);
+      var output4 = process4(ref z3Ctxt, output1, output2); // ok
 
       var tmpCond = z3Ctxt.MkEq(output4[0], z3Ctxt.MkBV(0x85963228, 32));
       z3Solver.Assert(tmpCond);
