@@ -88,12 +88,20 @@ namespace f4b_xor_w4kfu_keygen
     {
       var output = passwords.ToArray();
       uint[] loopCounts = { 0x28, 0x14b, 0xcd, 0x3a, 0x178, 0x35e };
+      uint[] xorAddConsts = { 0x8fd5c5bd, 0x1f817abb, 0xe8504430, 0xa6258a12, 0x90bf3d8b, 0xc350be97 };
 
       for (var i = 0; i < 6; i++)
       {
-        if (loopCounts[i] % 2 != 0)
+        //if (loopCounts[i] % 2 != 0)
+        //{
+        //  output[i] = bit_reverse(ref z3Ctxt, output[i]);
+        //}
+        var constBv = z3Ctxt.MkBV(xorAddConsts[i], 32);
+        for (var j = 0; j < loopCounts[i]; j++)
         {
           output[i] = bit_reverse(ref z3Ctxt, output[i]);
+          output[i] = z3Ctxt.MkBVXOR(output[i], constBv);
+          output[i] = z3Ctxt.MkBVAdd(output[i], constBv);
         }
       }
 
@@ -106,7 +114,7 @@ namespace f4b_xor_w4kfu_keygen
       //passwords[0] = z3Ctxt.MkBVXOR()
       var output = new Microsoft.Z3.BitVecExpr[6];
       uint[] rolOffsets = { 0x0, 0x1a, 0x8, 0xd, 0x10, 0x1e };
-      for (var i = 0; i < 6; i++) 
+      for (var i = 0; i < 6; i++)
       {
         output[i] = z3Ctxt.MkBVXOR(output2[i], z3Ctxt.MkBVRotateLeft(rolOffsets[i], output1[i]));
       }
@@ -118,7 +126,7 @@ namespace f4b_xor_w4kfu_keygen
     static Microsoft.Z3.BitVecExpr[] process5(ref Microsoft.Z3.Context z3Ctxt, Microsoft.Z3.BitVecExpr[] output2, Microsoft.Z3.BitVecExpr[] output3)
     {
       var output = new Microsoft.Z3.BitVecExpr[6];
-      for (var i = 0; i < 6; i++) 
+      for (var i = 0; i < 6; i++)
       {
         output[i] = z3Ctxt.MkBVXOR(bit_reverse(ref z3Ctxt, output3[i]), output2[i]);
       }
@@ -141,6 +149,7 @@ namespace f4b_xor_w4kfu_keygen
     static void Main(string[] args)
     {
       var z3Ctxt = new Microsoft.Z3.Context();
+      var z3Solver = z3Ctxt.MkSolver("QF_BV");
 
       var passwords = new Microsoft.Z3.BitVecExpr[6];
       for (var i = 0; i < passwords.Length; i++)
@@ -161,18 +170,45 @@ namespace f4b_xor_w4kfu_keygen
         }
       }
 
-      passwords = process0(ref z3Ctxt, passwords);
+      var output0 = process0(ref z3Ctxt, passwords);
+
+      //var tmpCond = z3Ctxt.MkEq(output0[0], z3Ctxt.MkBV(0xa262730b, 32));
+      //z3Solver.Assert(tmpCond);
 
       //Console.WriteLine("{0}", passwords[0].ToString());
 
-      var output1 = process1(ref z3Ctxt, passwords);
+      var output1 = process1(ref z3Ctxt, output0); // ok
+
+      //var tmpCond = z3Ctxt.MkEq(output1[0], z3Ctxt.MkBV(0xd9ef05ab, 32));
+      //z3Solver.Assert(tmpCond);
 
       //Console.WriteLine("{0}", output1[0].ToString());
       //Console.WriteLine("{0}", output1[1].ToString());
 
-      var output2 = process2(ref z3Ctxt, passwords);
-      var output3 = process3(ref z3Ctxt, passwords);
+      var output2 = process2(ref z3Ctxt, output0); // ok
+
+      //var tmpCond = z3Ctxt.MkEq(output2[0], z3Ctxt.MkBV(0x5c793783, 32));
+      //z3Solver.Assert(tmpCond);
+
+      //var result = z3Solver.Check();
+      //Console.WriteLine("{0}", result.ToString());
+      //if (result == Microsoft.Z3.Status.SATISFIABLE)
+      //{
+      //  Console.Write("Password: ");
+      //  var model = z3Solver.Model;
+      //  Console.Write("0x{0:x}", System.Convert.ToUInt32(model.Evaluate(passwords[0]).ToString()));
+      //}
+
+      var output3 = process3(ref z3Ctxt, output0); // ok
+
+      //var tmpCond = z3Ctxt.MkEq(output3[0], z3Ctxt.MkBV(0x2a918342, 32));
+      //z3Solver.Assert(tmpCond);
+
       var output4 = process4(ref z3Ctxt, output1, output2);
+
+      var tmpCond = z3Ctxt.MkEq(output4[0], z3Ctxt.MkBV(0x85963228, 32));
+      z3Solver.Assert(tmpCond);
+
       var output5 = process5(ref z3Ctxt, output2, output3);
       var output6 = process6(ref z3Ctxt, output4, output5);
 
@@ -203,15 +239,17 @@ namespace f4b_xor_w4kfu_keygen
       //  idx++;
       //}
 
-      var z3Solver = z3Ctxt.MkSolver("QF_BV");
-      z3Solver.Assert(checkingConds[0]);
+      //z3Solver.Assert(checkingConds[0]);
       //z3Solver.Assert(allConds);
+
+      //Console.WriteLine("{0}", z3Solver.ToString());
 
       //var uniqueConds = z3Ctxt.MkAnd(allConds);
       //var uniqueConds = z3Ctxt.MkAnd(password0Conds);
-      System.IO.File.WriteAllText(@"password0_constraints.smt2", "(set-logic QF_BV)\n(set-info :smt-lib-version 2.0)\n\n");
+      System.IO.File.WriteAllText(@"password0_constraints.smt2", "(set-logic QF_BV)\n(set-info :smt-lib-version 2.0)\n(set-option :produce-models true)\n\n");
       System.IO.File.AppendAllText(@"password0_constraints.smt2", z3Solver.ToString());
       System.IO.File.AppendAllText(@"password0_constraints.smt2", "\n(check-sat)\n");
+      System.IO.File.AppendAllText(@"password0_constraints.smt2", "\n(get-value (password0))\n");
 
       //Console.WriteLine("{0}", "looking for the passwords[0]...");
       //var result = z3Solver.Check();
