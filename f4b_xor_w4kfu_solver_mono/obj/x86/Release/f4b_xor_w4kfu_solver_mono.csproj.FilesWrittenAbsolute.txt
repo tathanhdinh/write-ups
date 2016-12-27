@@ -1,0 +1,7 @@
+/home/tathanhdinh/Documents/Github/write-ups/f4b_xor_w4kfu_solver_mono/obj/x86/Release/.NETFramework,Version=v4.5.AssemblyAttribute.cs
+/home/tathanhdinh/Documents/Github/write-ups/f4b_xor_w4kfu_solver_mono/bin/Release/z3/libz3.so
+/home/tathanhdinh/Documents/Github/write-ups/f4b_xor_w4kfu_solver_mono/bin/Release/f4b_xor_w4kfu_solver_mono.exe.mdb
+/home/tathanhdinh/Documents/Github/write-ups/f4b_xor_w4kfu_solver_mono/bin/Release/f4b_xor_w4kfu_solver_mono.exe
+/home/tathanhdinh/Documents/Github/write-ups/f4b_xor_w4kfu_solver_mono/obj/x86/Release/f4b_xor_w4kfu_solver_mono.exe
+/home/tathanhdinh/Documents/Github/write-ups/f4b_xor_w4kfu_solver_mono/obj/x86/Release/f4b_xor_w4kfu_solver_mono.exe.mdb
+/home/tathanhdinh/Documents/Github/write-ups/f4b_xor_w4kfu_solver_mono/bin/Release/Microsoft.Z3.dll

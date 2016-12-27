@@ -656,7 +656,7 @@ where `password` is nothing but the buffer at `0x403198` containing the input pa
 
 ![Address spreading](images/address_spreading.png)
 
-#### Decompilation ####
+#### <a name="decompilation">Decompilation</a> ####
 
   We doubt that anyone bothers to read this decompilation crap, just too boring :-); fortunately making it more comprehensible is not hard. First, each process `i` has some "local" variables as `dword` elements of the array `0x403ca8[i][...]`, so we can apply the [constant propagation](http://www.compileroptimizations.com/category/constant_propagation.htm) and [liveness analysis](https://en.wikipedia.org/wiki/Live_variable_analysis) on these variables. There are also high-level loops, for example, the following instructions in the process `1`:
 
@@ -934,11 +934,14 @@ Indeed, the modification taken on `password[j]` in each process is protected by 
 
 ## Finding the password ##
 
-  The final checking procedure just compares each `vshared[6][i]` (for `i = 1..6`) witch a specific constant. We can observe that `vshared[6][i]` is indeed calculated from `password[i]` under the following scheme:
+  The lengthy analysis which we have been presented so far would be useless if it cannot help finding the  password making the program print `Yes!` :-). Fortunately, this is mostly immediate once the semantics of the program is reversed.
+
+### Password checking scheme ###
+  The final checking procedure just compares each `vshared[6][i+1]` (for `i = 0..5`) witch a specific constant. We can observe that `vshared[6][i+1]` is indeed calculated from `password[i]` under the following scheme:
 
   ![Password calculation diagram](images/password_diagram.svg)
 
-  In each process, noises are added *separately* into `password[i]` to transform it to a new value. All details have been already revealed above, for example, when `i = 0` we have:
+  In each process `j`, noises are added *separately* into `password[i]` to transform it to a new value `vshared[j][i+1]`. All details have been already revealed in the [previous section](#decompilation), for example, when `i = 0` we have:
 
     process 0:
       password[0] += 0x550342b8;
@@ -947,28 +950,55 @@ Indeed, the modification taken on `password[j]` in each process is protected by 
       for (v = password[0], i = 0; i < 0x36d; ++i) {
         v ^= 0x6dc555e2; v = rol(v, 0x1f);
       }
-      output1 = v;
+      vshared[1][1] = v;
 
     process 2:
       for (v = password[0], i = 0; i < 0x6e; ++i) {
         v -= 0xecf6d571; v = ror(v, 0xe);
       }
-      output2 = v
+      vshared[2][1] = v
 
     process 3:
       for (v = password[0], i = 0; i < 0x28; ++i) {
         v = 0x8fd5c5bd ^ bit_reverse(v); v += 0x8fd5c5bd;
       }
-      output3 = v;
+      vshared[3][1] = v;
 
     process 4:
-      v = output2 ^ rol(output1, 0x0);
-      output4 = v;
+      v = vshared[2][1] ^ rol(vshared[1][1], 0x0);
+      vshared[4][1] = v;
 
     ...
 
 
-  This kind of transformation is well known as **mixed boolean arithmetic** which has been [introduced](https://www.researchgate.net/publication/221239701_Information_Hiding_in_Software_with_Mixed_Boolean-Arithmetic_Transforms) to obfuscate softwares.
+  This kind of transformation is well known as **mixed boolean arithmetic** which is [introduced](https://www.researchgate.net/publication/221239701_Information_Hiding_in_Software_with_Mixed_Boolean-Arithmetic_Transforms) to protect softwares.
+
+  **Remark:**
+  the password manipulation scheme proceeds on `passwords[i]` for `i = 0..5`, namely on `6 * 4  = 24` bytes of password's buffer, regardless the real length of input. We can also observe that the program reads maximum `24` bytes, and the password's buffer is zero initialized.
+
+  ![Password buffer](images/password_buffer.png)
+
+### SMT solver ###
+
+  We avoid any trick and proceed with a direct approach. Indeed, the constraint of each `password[i]` can be represented by a [SMT formula](https://en.wikipedia.org/wiki/Satisfiability_modulo_theories) in quantifier-free bit-vector (`QF_BV`) theory. Building these formulae is mostly direct (e.g. [this file](passwords0_constraints.smt2) contains  constraints for `password[0]`) in `smt2` format, a SMT solver will take the hardest work:
+
+    ./boolector --lingeling passwords0_constraints.smt2
+    sat
+    ((passwords0 #b01001101010111110011000001010011))
+
+  The solver [boolector](http://fmv.jku.at/boolector/) found a bit-vector value for `password[0]` that satisfies the constraint; noticing that this value is nothing but `S0_M` in ASCII. Similarly, we get values `4nY_`, `ThR3`, `ad_1`, `n_D4` and `t_VM` for other `password[i]`(s); that leads to the value `S0_M4nY_ThR3ad_1n_D4t_VM` which satisfies all constraints of the program:
+
+    ./F4b_XOR_W4kfu.exe
+    Welcome!
+    Password? S0_M4nY_ThR3ad_1n_D4t_VM
+    Yes!
+
+  this is also the good password, as supposed :-).
+
+  **Remark:**
+  boolector (version `2.2.0`) takes about `18` minutes on an `Intel Xeon E5-2643` for each `password[i]`. We have tried also with [Z3](https://github.com/Z3Prover/z3) and [CVC4](http://cvc4.cs.nyu.edu/) but they take considerably more time.
+
+
 
   <!--Well, no comment..., we have not any single idea about the underlying motivationideas of the authors when design this obscure instruction set :-)-->
 

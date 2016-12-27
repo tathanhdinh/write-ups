@@ -1,0 +1,17 @@
+﻿
+Microsoft Visual Studio Solution File, Format Version 12.00
+# Visual Studio 2012
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "f4b_xor_w4kfu_solver_mono", "f4b_xor_w4kfu_solver_mono.csproj", "{2C2B067D-673E-47F2-8F50-4D00A9BF8406}"
+EndProject
+Global
+	GlobalSection(SolutionConfigurationPlatforms) = preSolution
+		Debug|x86 = Debug|x86
+		Release|x86 = Release|x86
+	EndGlobalSection
+	GlobalSection(ProjectConfigurationPlatforms) = postSolution
+		{2C2B067D-673E-47F2-8F50-4D00A9BF8406}.Debug|x86.ActiveCfg = Debug|x86
+		{2C2B067D-673E-47F2-8F50-4D00A9BF8406}.Debug|x86.Build.0 = Debug|x86
+		{2C2B067D-673E-47F2-8F50-4D00A9BF8406}.Release|x86.ActiveCfg = Release|x86
+		{2C2B067D-673E-47F2-8F50-4D00A9BF8406}.Release|x86.Build.0 = Release|x86
+	EndGlobalSection
+EndGlobal
