@@ -934,9 +934,10 @@ Indeed, the modification taken on `password[j]` in each process is protected by 
 
 ## Finding the password ##
 
-  The lengthy analysis which we have been presented so far would be useless if it cannot help finding the  password making the program print `Yes!` :-). Fortunately, this is mostly immediate once the semantics of the program is reversed.
+  The lengthy analysis which we have been presented so far would be useless if it cannot help finding the  good password (i.e. one making the program print `Yes!`). Fortunately, this is mostly immediate once the semantics of the program is reversed.
 
 ### Password checking scheme ###
+
   The final checking procedure just compares each `vshared[6][i+1]` (for `i = 0..5`) witch a specific constant. We can observe that `vshared[6][i+1]` is indeed calculated from `password[i]` under the following scheme:
 
   ![Password calculation diagram](images/password_diagram.svg)
@@ -980,13 +981,13 @@ Indeed, the modification taken on `password[j]` in each process is protected by 
 
 ### SMT solver ###
 
-  We avoid any trick and proceed with a direct approach. Indeed, the constraint of each `password[i]` can be represented by a [SMT formula](https://en.wikipedia.org/wiki/Satisfiability_modulo_theories) in quantifier-free bit-vector (`QF_BV`) theory. Building these formulae is mostly direct (e.g. [this file](passwords0_constraints.smt2) contains  constraints for `password[0]`) in `smt2` format, a SMT solver will take the hardest work:
+  We avoid (aka cannot found :-)) any trick and proceed with a direct approach. Indeed, the constraint of each `password[i]` can be represented by a [SMT formula](https://en.wikipedia.org/wiki/Satisfiability_modulo_theories) in quantifier-free bit-vector (`QF_BV`) theory. Building these formulae is mostly direct (e.g. [this file](passwords0_constraints.smt2) contains  constraints for `password[0]` in `smt2` format), a SMT solver will take care of the rest.
 
     ./boolector --lingeling passwords0_constraints.smt2
     sat
     ((passwords0 #b01001101010111110011000001010011))
 
-  The solver [boolector](http://fmv.jku.at/boolector/) found a bit-vector value for `password[0]` that satisfies the constraint; noticing that this value is nothing but `S0_M` in ASCII. Similarly, we get values `4nY_`, `ThR3`, `ad_1`, `n_D4` and `t_VM` for other `password[i]`(s); that leads to the value `S0_M4nY_ThR3ad_1n_D4t_VM` which satisfies all constraints of the program:
+  [boolector](http://fmv.jku.at/boolector/) found a bit-vector value for `password[0]` that satisfies the password checking constraint; this value is nothing but the string "`S0_M`" in ASCII. Similarly, we get "`4nY_`", "`ThR3`", "`ad_1`", "`n_D4`" and "`t_VM`" for other `password[i]`(s); that leads to the value `S0_M4nY_ThR3ad_1n_D4t_VM` which satisfies all constraints of the program:
 
     ./F4b_XOR_W4kfu.exe
     Welcome!

@@ -214,7 +214,7 @@ namespace f4b_xor_w4kfu_keygen
 			// var tmpCond = z3Ctxt.MkEq(output5[0], z3Ctxt.MkBV(0x1eb8bed7, 32));
 			// z3Solver.Assert(tmpCond);
 
-			var output6 = process6(ref z3Ctxt, output4, output5);
+			var output6 = process6(ref z3Ctxt, output4, output5); // ok
 
 			var checkingConds = new Microsoft.Z3.BoolExpr[6];
 			uint[] compareConstants = { 0x73ae5f50, 0xbd2b6a91, 0x3e4e9687, 0xbcfaadcc, 0xcd2ca810, 0x9d26237e };
@@ -230,32 +230,46 @@ namespace f4b_xor_w4kfu_keygen
 				password0Conds[i + 1] = asciiConds[0, i];
 			}
 
-			z3Solver.Assert(password0Conds);
+			// z3Solver.Assert(password0Conds);
 
-			//var allConds = new Microsoft.Z3.BoolExpr[6 + 24];
-			//var idx = 0;
-			//foreach (var cond in checkingConds)
-			//{
+			var password1Conds = new Microsoft.Z3.BoolExpr[1 + 4];
+			password1Conds[0] = checkingConds[1];
+			for (var i = 0; i < 4; i++) 
+			{
+				password1Conds[i + 1] = asciiConds[1, i];
+			}
+
+			z3Solver.Assert(password1Conds);
+
+			// var allConds = new Microsoft.Z3.BoolExpr[6 + 24];
+			// var idx = 0;
+			// foreach (var cond in checkingConds)
+			// {
 			//  allConds[idx] = cond;
 			//  idx++;
-			//}
-			//foreach (var cond in asciiConds)
-			//{
+			// }
+			// foreach (var cond in asciiConds)
+			// {
 			//  allConds[idx] = cond;
 			//  idx++;
-			//}
+			// }
 
 			//z3Solver.Assert(checkingConds[0]);
-			//z3Solver.Assert(allConds);
+			// z3Solver.Assert(allConds);
 
 			//Console.WriteLine("{0}", z3Solver.ToString());
 
 			//var uniqueConds = z3Ctxt.MkAnd(allConds);
 			//var uniqueConds = z3Ctxt.MkAnd(password0Conds);
-			System.IO.File.WriteAllText(@"passwords0_constraints.smt2", "(set-logic QF_BV)\n(set-info :smt-lib-version 2.0)\n(set-option :produce-models true)\n\n");
-			System.IO.File.AppendAllText(@"passwords0_constraints.smt2", z3Solver.ToString());
-			System.IO.File.AppendAllText(@"passwords0_constraints.smt2", "\n(check-sat)\n");
-			System.IO.File.AppendAllText(@"passwords0_constraints.smt2", "\n(get-value (passwords0))\n");
+			System.IO.File.WriteAllText(@"passwords1_constraints.smt2", "(set-logic QF_BV)\n(set-info :smt-lib-version 2.0)\n(set-option :produce-models true)\n\n");
+			System.IO.File.AppendAllText(@"passwords1_constraints.smt2", z3Solver.ToString());
+			System.IO.File.AppendAllText(@"passwords1_constraints.smt2", "\n(check-sat)\n");
+			// System.IO.File.AppendAllText(@"passwords_constraints.smt2", "(get-value (passwords0))\n");
+			System.IO.File.AppendAllText(@"passwords1_constraints.smt2", "(get-value (passwords1))\n");
+			// System.IO.File.AppendAllText(@"passwords_constraints.smt2", "(get-value (passwords2))\n");
+			// System.IO.File.AppendAllText(@"passwords_constraints.smt2", "(get-value (passwords3))\n");
+			// System.IO.File.AppendAllText(@"passwords_constraints.smt2", "(get-value (passwords4))\n");
+			// System.IO.File.AppendAllText(@"passwords_constraints.smt2", "(get-value (passwords5))\n");
 
 			//Console.WriteLine("{0}", "looking for the passwords[0]...");
 			//var result = z3Solver.Check();
