@@ -981,13 +981,13 @@ Indeed, the modification taken on `password[j]` in each process is protected by 
 
 ### SMT solver ###
 
-  We avoid (aka cannot found :-)) any trick and proceed with a direct approach. Indeed, the constraint of each `password[i]` can be represented by a [SMT formula](https://en.wikipedia.org/wiki/Satisfiability_modulo_theories) in quantifier-free bit-vector (`QF_BV`) theory. Building these formulae is mostly direct (e.g. [this file](passwords0_constraints.smt2) contains  constraints for `password[0]` in `smt2` format), a SMT solver will take care of the rest.
+  We avoid (aka cannot found :-)) any trick and proceed with a direct approach. Indeed, the constraint of each `passwords[i]` can be represented by a [SMT formula](https://en.wikipedia.org/wiki/Satisfiability_modulo_theories) in quantifier-free bit-vector (`QF_BV`) theory. Building these formulae is mostly direct (e.g. [this file](passwords0_constraints.smt2) contains  constraints for `passwords[0]` in `smt2` format), a SMT solver will take care of the rest.
 
     ./boolector --lingeling passwords0_constraints.smt2
     sat
     ((passwords0 #b01001101010111110011000001010011))
 
-  [boolector](http://fmv.jku.at/boolector/) found the `32` bit-vector value `01001101010111110011000001010011` for `password[0]` that satisfies the password checking constraint. Since the bit order is little-endian, this value is nothing but the string "`S0_M`" in ASCII. Similarly, we get "`4nY_`", "`ThR3`", "`ad_1`", "`n_D4`" and "`t_VM`" for other `password[i]`(s), that leads to the string `S0_M4nY_ThR3ad_1n_D4t_VM` which satisfies all constraints of the program:
+  [boolector](http://fmv.jku.at/boolector/) found the `32` bit-vector value `01001101010111110011000001010011` for `passwords[0]` that satisfies the password checking constraint. Since the left-to-right position of bits is from `31` to `0`, this value represents nothing but the string "`S0_M`" in ASCII. Similarly, we get "`4nY_`", "`ThR3`", "`ad_1`", "`n_D4`" and "`t_VM`" for other `passwords[i]`(s), that leads to the string `S0_M4nY_ThR3ad_1n_D4t_VM` which satisfies all constraints of the program:
 
     ./F4b_XOR_W4kfu.exe
     Welcome!
@@ -997,7 +997,8 @@ Indeed, the modification taken on `password[j]` in each process is protected by 
   this is also the good password, as supposed :-).
 
   **Remark:**
-  boolector (version `2.2.0`) takes about `18` minutes on an `Intel Xeon E5-2643` for each `password[i]`. We have tried also with [Z3](https://github.com/Z3Prover/z3) and [CVC4](http://cvc4.cs.nyu.edu/) but they take considerably more time.
+  we give `smt2` files for other `passwords[i]`(s) [here](passwords1_constraints.smt2), [here](passwords2_constraints.smt2), [here](passwords3_constraints.smt2), [here](passwords4_constraints.smt2) and [here](passwords5_constraints.smt2).
+  <!--boolector (version `2.2.0`) takes about `18` minutes on an `Intel Xeon E5-2643` for each `password[i]`. We have tried also with [Z3](https://github.com/Z3Prover/z3) and [CVC4](http://cvc4.cs.nyu.edu/) but they take considerably more time.-->
 
 
 
