@@ -229,7 +229,6 @@ namespace f4b_xor_w4kfu_keygen
 			{
 				password0Conds[i + 1] = asciiConds[0, i];
 			}
-
 			// z3Solver.Assert(password0Conds);
 
 			var password1Conds = new Microsoft.Z3.BoolExpr[1 + 4];
@@ -238,8 +237,23 @@ namespace f4b_xor_w4kfu_keygen
 			{
 				password1Conds[i + 1] = asciiConds[1, i];
 			}
+			// z3Solver.Assert(password1Conds);
 
-			z3Solver.Assert(password1Conds);
+			var password2Conds = new Microsoft.Z3.BoolExpr[1 + 4];
+			password2Conds[0] = checkingConds[2];
+			for (var i = 0; i < 4; i++)
+			{
+				password2Conds[i + 1] = asciiConds[2, i];
+			}
+			// z3Solver.Assert(password2Conds);
+
+			var password3Conds = new Microsoft.Z3.BoolExpr[1 + 4];
+			password3Conds[0] = checkingConds[3];
+			for (var i = 0; i < 4; i++)
+			{
+				password3Conds[i + 1] = asciiConds[3, i];
+			}
+			z3Solver.Assert(password3Conds);
 
 			// var allConds = new Microsoft.Z3.BoolExpr[6 + 24];
 			// var idx = 0;
@@ -261,11 +275,11 @@ namespace f4b_xor_w4kfu_keygen
 
 			//var uniqueConds = z3Ctxt.MkAnd(allConds);
 			//var uniqueConds = z3Ctxt.MkAnd(password0Conds);
-			System.IO.File.WriteAllText(@"passwords1_constraints.smt2", "(set-logic QF_BV)\n(set-info :smt-lib-version 2.0)\n(set-option :produce-models true)\n\n");
-			System.IO.File.AppendAllText(@"passwords1_constraints.smt2", z3Solver.ToString());
-			System.IO.File.AppendAllText(@"passwords1_constraints.smt2", "\n(check-sat)\n");
+			System.IO.File.WriteAllText(@"passwords3_constraints.smt2", "(set-logic QF_BV)\n(set-info :smt-lib-version 2.0)\n(set-option :produce-models true)\n\n");
+			System.IO.File.AppendAllText(@"passwords3_constraints.smt2", z3Solver.ToString());
+			System.IO.File.AppendAllText(@"passwords3_constraints.smt2", "\n(check-sat)\n");
 			// System.IO.File.AppendAllText(@"passwords_constraints.smt2", "(get-value (passwords0))\n");
-			System.IO.File.AppendAllText(@"passwords1_constraints.smt2", "(get-value (passwords1))\n");
+			System.IO.File.AppendAllText(@"passwords3_constraints.smt2", "(get-value (passwords3))\n");
 			// System.IO.File.AppendAllText(@"passwords_constraints.smt2", "(get-value (passwords2))\n");
 			// System.IO.File.AppendAllText(@"passwords_constraints.smt2", "(get-value (passwords3))\n");
 			// System.IO.File.AppendAllText(@"passwords_constraints.smt2", "(get-value (passwords4))\n");

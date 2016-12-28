@@ -987,7 +987,7 @@ Indeed, the modification taken on `password[j]` in each process is protected by 
     sat
     ((passwords0 #b01001101010111110011000001010011))
 
-  [boolector](http://fmv.jku.at/boolector/) found a bit-vector value for `password[0]` that satisfies the password checking constraint; this value is nothing but the string "`S0_M`" in ASCII. Similarly, we get "`4nY_`", "`ThR3`", "`ad_1`", "`n_D4`" and "`t_VM`" for other `password[i]`(s); that leads to the value `S0_M4nY_ThR3ad_1n_D4t_VM` which satisfies all constraints of the program:
+  [boolector](http://fmv.jku.at/boolector/) found the `32` bit-vector value `01001101010111110011000001010011` for `password[0]` that satisfies the password checking constraint. Since the bit order is little-endian, this value is nothing but the string "`S0_M`" in ASCII. Similarly, we get "`4nY_`", "`ThR3`", "`ad_1`", "`n_D4`" and "`t_VM`" for other `password[i]`(s), that leads to the string `S0_M4nY_ThR3ad_1n_D4t_VM` which satisfies all constraints of the program:
 
     ./F4b_XOR_W4kfu.exe
     Welcome!
